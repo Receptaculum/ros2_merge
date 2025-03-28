@@ -1,0 +1,73 @@
+import cv2
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSHistoryPolicy
+from rclpy.qos import QoSDurabilityPolicy
+from rclpy.qos import QoSReliabilityPolicy
+
+from interfaces_pkg.msg import CarData, SegmentGroup
+
+#---------------Variable Setting---------------
+# Subscribe할 토픽 이름
+SUB_TOPIC_NAME = "segmented_data"
+
+# Publish할 토픽 이름
+PUB_TOPIC_NAME = "car_data"
+#----------------------------------------------
+
+
+class CarDetector(Node):
+    def __init__(self):
+        super().__init__('car_info_extractor')
+
+        self.sub_topic = self.declare_parameter('sub_detection_topic', SUB_TOPIC_NAME).value
+        self.pub_topic = self.declare_parameter('pub_topic', PUB_TOPIC_NAME).value
+
+        # QoS settings
+        self.qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            durability=QoSDurabilityPolicy.VOLATILE,
+            depth=1
+        )
+        
+        self.subscriber = self.create_subscription(SegmentGroup, self.sub_topic, self.yolov8_detections_callback, self.qos_profile)
+        self.publisher = self.create_publisher(CarData, self.pub_topic, self.qos_profile)
+    
+    def yolov8_detections_callback(self, detection_msg: SegmentGroup):
+        car_bbox = detection_msg.car  # int32[] 형태
+
+        if not car_bbox or len(car_bbox) % 4 != 0:
+            return  # 데이터가 없거나, 좌표 개수가 4의 배수가 아니라면 return
+        car_data = CarData()
+
+        # 4개씩 묶어서 (x1, y1, x2, y2) 좌표 추출
+        for i in range(0, len(car_bbox), 4):
+            x1, y1, x2, y2 = car_bbox[i:i+4]
+
+            # 중심 좌표 계산
+            car_center_x = (x1 + x2) / 2.0
+            car_center_y = (y1 + y2) / 2.0
+
+            car_data.x.append(car_center_x)
+            car_data.y.append(car_center_y)
+
+        # 결과 publish
+        self.publisher.publish(car_data)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = CarDetector()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        print("\n\nshutdown\n\n")
+    finally:
+        node.destroy_node()
+        cv2.destroyAllWindows()
+        rclpy.shutdown()
+  
+if __name__ == '__main__':
+    main()
