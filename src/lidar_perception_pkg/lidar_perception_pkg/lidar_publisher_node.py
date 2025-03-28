@@ -7,11 +7,9 @@ from rclpy.qos import QoSHistoryPolicy
 from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
 
-import sys
-import os
 import tf2_ros
 import geometry_msgs.msg
-# from .lib.rplidar import RPLidar, RPLidarException
+
 from .lib import lidar_perception_func_lib as LPFL
 import numpy as np
 

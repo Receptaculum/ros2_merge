@@ -26,7 +26,7 @@ SUB_IMAGE_TOPIC_NAME = "image_publisher"
 PUB_TOPIC_NAME = "traffic_data"
 
 # 로깅 여부
-LOG = False
+LOG = True
 
 ######################################################################################################
 

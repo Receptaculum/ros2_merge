@@ -8,12 +8,17 @@ from rclpy.qos import QoSReliabilityPolicy
 
 from interfaces_pkg.msg import CarData, SegmentGroup
 
+import logging
+
 #---------------Variable Setting---------------
 # Subscribe할 토픽 이름
 SUB_TOPIC_NAME = "segmented_data"
 
 # Publish할 토픽 이름
 PUB_TOPIC_NAME = "car_data"
+
+# 로깅 여부
+LOG = True
 #----------------------------------------------
 
 
@@ -35,6 +40,11 @@ class CarDetector(Node):
         self.subscriber = self.create_subscription(SegmentGroup, self.sub_topic, self.yolov8_detections_callback, self.qos_profile)
         self.publisher = self.create_publisher(CarData, self.pub_topic, self.qos_profile)
     
+        # 로깅 여부 설정
+        if LOG == False: 
+            self.get_logger().set_level(logging.FATAL)
+
+
     def yolov8_detections_callback(self, detection_msg: SegmentGroup):
         car_bbox = detection_msg.car  # int32[] 형태
 
@@ -54,6 +64,7 @@ class CarDetector(Node):
             car_data.y.append(car_center_y)
 
         # 결과 publish
+        self.get_logger().info(f"x = {car_data.x} | y = {car_data.y}")
         self.publisher.publish(car_data)
 
 
