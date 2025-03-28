@@ -28,14 +28,14 @@ LABEL_NAME = ["lane1", "lane2", "traffic_light", "car", "cross_walk"]
 # 구독 토픽 이름
 SUB_TOPIC_NAME = "image_publisher"
 
-# PT 파일 이름 지정 (확장자 포함)
+# PT 파일 이름 지정 (확장자 포함, 해당 실행 파일의 디럭터리는 이미 앞에 포함되어 있다는 점에 유념)
 PT_NAME = "lib/pt/best.0323.2258.pt"
 
 # CV 처리 영상 출력 여부
 DEBUG = True
 
 # 로깅 여부
-LOG = False
+LOG = True
 
 # 동작 모드 (cpu, cuda, xpu)
 DEVICE = "cpu"

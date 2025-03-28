@@ -6,6 +6,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDur
 import cv2
 import cv_bridge
 
+import os
 import time
 import logging
 
@@ -13,7 +14,7 @@ import logging
 ## <Parameter> #####################################################################################
 
 # 영상 소스
-FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video_car_slow.mp4"
+FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video.mp4"
 
 # 영상 크기 (가로, 세로)
 FRAME_SIZE = [640, 480]
@@ -25,10 +26,10 @@ NODE_NAME = "image_publisher"
 TOPIC_NAME = "image_publisher"
 
 # 전송 주기
-PUBLISH_PERIOD = 2
+PUBLISH_PERIOD = 0.03
 
 # 로깅 여부
-LOG = False
+LOG = True
 
 ######################################################################################################
 
