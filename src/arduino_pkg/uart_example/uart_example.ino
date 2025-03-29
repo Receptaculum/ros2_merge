@@ -1,14 +1,14 @@
 char msg[3];
-uint8_t steer;
-uint8_t left_speed;
-uint8_t right_speed;
+int8_t steer;
+int8_t left_speed;
+int8_t right_speed;
 
 void setup() {
   Serial.begin(38400);
 }
 
 void loop() {
-  if (Serial.available() > 0) {
+  if (Serial.available() >= 3) {
     for(int i = 0; i < 3; i++){
       msg[i] = Serial.read();
       }
@@ -24,5 +24,5 @@ void loop() {
       Serial.print(right_speed);
       Serial.print("\n");
   }
-  delay(10);
+  delay(5);
 }

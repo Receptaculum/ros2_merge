@@ -3,7 +3,7 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import UInt8MultiArray
+from std_msgs.msg import Int8MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import random
@@ -17,7 +17,7 @@ NODE_NAME = "communication_debugger"
 TOPIC_NAME = "command_data"
 
 # 주기
-TIMER_PERIOD = 0.2
+TIMER_PERIOD = 0.1
 
 ######################################################################################################
 
@@ -32,17 +32,17 @@ class communication_debugger(Node):
                 depth=1
                 )
                
-        self.publisher = self.create_publisher(UInt8MultiArray, topic_name, self.qos)
+        self.publisher = self.create_publisher(Int8MultiArray, topic_name, self.qos)
         self.timer =self.create_timer(timer_period, self.send_callback)
 
-        self.msg = UInt8MultiArray()
+        self.msg = Int8MultiArray()
 
     def send_callback(self):
 
         # 0~255 (8 bit, 1 Byte)
-        steer_angle = int(random.random()*255)
-        left_speed = int(random.random()*255)
-        right_speed = int(random.random()*255)
+        steer_angle = int(random.random()*255-128) # -128 ~ 127
+        left_speed = int(random.random()*255-128)  # -128 ~ 127
+        right_speed = int(random.random()*255-128) # -128 ~ 127
 
         self.msg.data = [steer_angle, left_speed, right_speed]
 

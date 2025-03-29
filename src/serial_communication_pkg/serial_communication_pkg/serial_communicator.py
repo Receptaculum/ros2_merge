@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import UInt8MultiArray
+from std_msgs.msg import Int8MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import serial
@@ -21,7 +21,7 @@ NODE_NAME = "serial_communicator"
 SUB_TOPIC_NAME = "command_data"
 
 # 로깅 여부
-LOG = False
+LOG = True
 
 ######################################################################################################
 
@@ -59,7 +59,7 @@ class serial_communicator(Node):
                 )
         
         # 지령값 구독
-        self.subscriber = self.create_subscription(UInt8MultiArray, sub_topic_name, self.send_callback, self.qos)
+        self.subscriber = self.create_subscription(Int8MultiArray, sub_topic_name, self.send_callback, self.qos)
 
         # 로깅 여부 설정
         if log == False: 
@@ -73,11 +73,12 @@ class serial_communicator(Node):
         
         # 조향 s (0~255) 1 byte | 속도 v (0~255) 2 byte
         # bbbbbbbb(조향) bbbbbbbb(속도_좌) bbbbbbbb(속도_우)
-        steer_angle_bin = hex(steer_angle)[2:].zfill(2)
-        left_motor_speed =  hex(left_motor_speed)[2:].zfill(2)
-        right_motor_speed =  hex(right_motor_speed)[2:].zfill(2)
+        # 양수 -> 그대로 | 음수 -> 2의 보수 변환
+        steer_angle_bin = hex(steer_angle if steer_angle > 0 else ((steer_angle+256) & 0xff))[2:].zfill(2)
+        left_motor_speed_bin =  hex(left_motor_speed if left_motor_speed > 0 else ((left_motor_speed+256) & 0xff))[2:].zfill(2)
+        right_motor_speed_bin =  hex(right_motor_speed if right_motor_speed > 0 else ((right_motor_speed+256) & 0xff))[2:].zfill(2)
 
-        msg_hex = '0x' + steer_angle_bin + left_motor_speed + right_motor_speed
+        msg_hex = '0x' + steer_angle_bin + left_motor_speed_bin + right_motor_speed_bin
         msg = int(msg_hex, 16).to_bytes(3, byteorder='big', signed=False)  
 
         self.serial.write(msg)
