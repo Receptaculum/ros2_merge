@@ -21,6 +21,9 @@
 ### ver. 1.0330.1
 - lidar_processor 기능을 lidar_publisher에 통합
 
+### ver. 1.0330.2
+- lidar_debugger 추가
+
 ## 계획
 
 - motion_planner 추가
