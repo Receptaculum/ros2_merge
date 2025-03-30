@@ -27,7 +27,7 @@ COUNT = 3
 
 # 각도 설정
 START_ANGLE = 0  # 감지 각도 범위의 시작 값
-END_ANGLE = 90   # 감지 각도 범위의 끝 값
+END_ANGLE = 30   # 감지 각도 범위의 끝 값
         
 # 범위 설정
 RANGE_MIN = 0.1  # 감지 거리 범위의 최소값 [m]

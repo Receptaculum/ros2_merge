@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'yolo_debugger = debug_pkg.yolo_debugger:main',
             'communication_debugger = debug_pkg.communication_debugger:main',
+            'lidar_debugger = debug_pkg.lidar_debugger:main',
         ],
     },
 )

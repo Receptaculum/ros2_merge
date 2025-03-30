@@ -117,16 +117,20 @@ class TrafficLightDetector(Node):
         
         if max_ratio == green_ratio:
             return 'G'
+        
         return 'N'
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = TrafficLightDetector()
+
     try:
         rclpy.spin(node)
+
     except KeyboardInterrupt:
         print("\n\nshutdown\n\n")
+        
     finally:
         node.destroy_node()
         cv2.destroyAllWindows()

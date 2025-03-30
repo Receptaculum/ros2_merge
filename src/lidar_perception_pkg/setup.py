@@ -13,8 +13,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='hhk-laptop',
-    maintainer_email='whaihong@g.skku.edu',
+    maintainer='user',
+    maintainer_email='user@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'lidar_publisher = lidar_perception_pkg.lidar_publisher:main',
 			'lidar_object_detector = lidar_perception_pkg.lidar_object_detector:main',
+   			'lidar_pol2cart = lidar_perception_pkg.lidar_pol2cart:main',
         ],
     },
 )
