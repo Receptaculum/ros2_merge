@@ -20,10 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'lidar_publisher_node = lidar_perception_pkg.lidar_publisher_node:main',
-			'lidar_processor_node = lidar_perception_pkg.lidar_processor_node:main',
-			'lidar_obstacle_detector_node = lidar_perception_pkg.lidar_obstacle_detector_node:main',
-			
+            'lidar_publisher = lidar_perception_pkg.lidar_publisher:main',
+			'lidar_object_detector = lidar_perception_pkg.lidar_object_detector:main',
         ],
     },
 )

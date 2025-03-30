@@ -16,7 +16,8 @@ from std_msgs.msg import String
 
 import logging
 
-## <Parameter> #####################################################################################
+
+## <Parameter> #######################################################################################
 
 # 구독 토픽 이름
 SUB_SEGMENTATION_TOPIC_NAME = "segmented_data"
@@ -29,6 +30,7 @@ PUB_TOPIC_NAME = "traffic_data"
 LOG = True
 
 ######################################################################################################
+
 
 class TrafficLightDetector(Node):
     def __init__(self):

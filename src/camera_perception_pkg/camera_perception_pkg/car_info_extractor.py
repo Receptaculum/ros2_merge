@@ -10,16 +10,17 @@ from interfaces_pkg.msg import CarData, SegmentGroup
 
 import logging
 
-#---------------Variable Setting---------------
-# Subscribe할 토픽 이름
+
+## <Parameter> #######################################################################################
+# 구독 토픽 이름
 SUB_TOPIC_NAME = "segmented_data"
 
-# Publish할 토픽 이름
+# 배포 토픽 이름
 PUB_TOPIC_NAME = "car_data"
 
 # 로깅 여부
 LOG = True
-#----------------------------------------------
+######################################################################################################
 
 
 class CarDetector(Node):
@@ -79,6 +80,7 @@ def main(args=None):
         node.destroy_node()
         cv2.destroyAllWindows()
         rclpy.shutdown()
+  
   
 if __name__ == '__main__':
     main()

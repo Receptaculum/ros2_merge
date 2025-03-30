@@ -13,18 +13,32 @@ import geometry_msgs.msg
 from .lib import lidar_perception_func_lib as LPFL
 import numpy as np
 
-#---------------Variable Setting---------------
-# Publish할 토픽 이름
-PUB_TOPIC_NAME = 'lidar_raw' 
+import logging
 
-# 라이다 장치 번호 (ls /dev/ttyUSB* 명령을 터미널 창에 입력하여 확인)
+
+## <Parameter> #######################################################################################
+
+# 발행 토픽 이름
+PUB_TOPIC_NAME_FOR_RAW = "lidar_raw"
+PUB_TOPIC_NAME_FOR_PROCESSED = "lidar_processed"
+
+# LIDAR 장치 주소
 LIDAR_PORT = '/dev/ttyUSB0'
-#----------------------------------------------
 
-class LidarSensorDataPublisher(Node):
+# 로깅 여부
+LOG = True
+
+# Lidar 정보 송신 주기
+PERIOD = 0.01
+
+######################################################################################################
+
+
+class lidar_publisher(Node):
     def __init__(self):
-        super().__init__('lidar_publisher_node')
+        super().__init__('lidar_publisher')
 
+        # QOS 설정
         self.qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
@@ -32,27 +46,42 @@ class LidarSensorDataPublisher(Node):
             depth=1
         )
 
-        self.publisher_ = self.create_publisher(LaserScan, PUB_TOPIC_NAME, self.qos_profile)
+        # Publisher 선언
+        self.publisher = self.create_publisher(LaserScan, PUB_TOPIC_NAME_FOR_RAW, self.qos_profile)
+        self.publisher_processed = self.create_publisher(LaserScan, PUB_TOPIC_NAME_FOR_PROCESSED, self.qos_profile)
+
+        # 공백 변수 선언
         self.lidar = None
         self.lidar_sensor_data_generator = None
+
+        # 좌표 변환 모듈 선언 (Unused)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        # Set up a timer to call publish_lidar_data at a regular interval
-        self.timer = self.create_timer(0.1, self.publish_lidar_data)
+        # Timer 선언
+        self.timer = self.create_timer(PERIOD, self.publish_lidar_data)
+        
+        # Lidar 초기화
         self.initialize_lidar()
 
+        # 로깅 여부 설정
+        if LOG == False: 
+            self.get_logger().set_level(logging.FATAL)
+
+
     def initialize_lidar(self):
-        """Initialize the RPLidar."""
+        # Initialize the RPLidar
         try:
             self.lidar = LPFL.RPLidar(LIDAR_PORT)
             self.lidar_sensor_data_generator = self.lidar.iter_scans()
+
         except LPFL.RPLidarException as e:
             self.get_logger().error(f'Failed to initialize LIDAR: {e}')
             self.destroy_node()
             rclpy.shutdown()
     
+
     def reset_lidar(self):
-        """Reset the LIDAR connection and data generator."""
+        # Reset the LIDAR connection and data generator
         try:
             self.lidar.stop()
             self.lidar.stop_motor()
@@ -62,7 +91,9 @@ class LidarSensorDataPublisher(Node):
         
         self.initialize_lidar()
 
+
     def publish_lidar_data(self):
+        # 좌표 변환 모듈 관련 파라미터 (Unused)
         transform = geometry_msgs.msg.TransformStamped()
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = 'base_link'
@@ -71,13 +102,14 @@ class LidarSensorDataPublisher(Node):
         transform.transform.translation.y = 0.0
         transform.transform.translation.z = 0.0
 
+        # 좌표 변환 데이터 전송 (Unused)
         self.tf_broadcaster.sendTransform(transform)
 
         try:
             scan = next(self.lidar_sensor_data_generator)
-            print('Got %d measurements' % len(scan))
             scan = np.array(scan)
-            # Create LaserScan message
+
+            # 메시지 설정
             msg = LaserScan()
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.header.frame_id = 'laser_frame'  # frame id of your lidar sensor
@@ -89,9 +121,11 @@ class LidarSensorDataPublisher(Node):
             msg.range_min = 0.15  # Minimum range value [m]
             msg.range_max = 12.0  # Maximum range value [m]
 
+            # Range / Intensity 변수 선언
             ranges = [float('inf')] * int((msg.angle_max - msg.angle_min) / msg.angle_increment)
             intensities = [0.0] * int((msg.angle_max - msg.angle_min) / msg.angle_increment)
             
+            # 데이터 가공
             for measurement in scan:
                 angle = np.radians(measurement[1])  # Convert to radians
                 if msg.angle_min <= angle <= msg.angle_max:
@@ -100,42 +134,59 @@ class LidarSensorDataPublisher(Node):
                         ranges[index] = measurement[2] / 1000.0  # Distance measurement
                         intensities[index] = measurement[0]  # Intensity measurement
             
+            # 메시지에 데이터 삽입
             msg.ranges = ranges
             msg.intensities = intensities
 
-            self.publisher_.publish(msg)
-            self.get_logger().info('Publishing: "%s"' % PUB_TOPIC_NAME)
+            # 변환된 데이터 추출
+            msg_proc = LPFL.rotate_lidar_data(msg, offset = 0) # offset = 0 ~ 359
+            msg_proc = LPFL.flip_lidar_data(msg_proc, pivot_angle = 0) # pivot_angle = 0 ~ 359
 
+            # 배포
+            self.publisher.publish(msg) # 변환 전 데이터
+            self.publisher_processed.publish(msg_proc) # 변환 후 데이터
+            self.get_logger().info(f'published')
+
+        # 오류 처리
         except StopIteration:
             self.get_logger().error('Failed to get lidar scan')
             return
+        
         except LPFL.RPLidarException as e:
             self.get_logger().error(f'RPLidar exception: {e}')
             self.reset_lidar()
+            
         except ValueError as e:
             self.get_logger().error(f'ValueError: {e}')
             self.reset_lidar()
 
+
     def __del__(self):
-        """Destructor to ensure LIDAR is properly shut down."""
+        # Destructor to ensure LIDAR is properly shut down
         try:
             if self.lidar:
                 self.lidar.stop()
                 self.lidar.stop_motor()
                 self.lidar.disconnect()
+
         except LPFL.RPLidarException as e:
             self.get_logger().error(f'Failed to properly shutdown LIDAR: {e}')
 
+
 def main(args=None):
     rclpy.init(args=args)
-    lidar_publisher = LidarSensorDataPublisher()
+    lidar_publisher_node = lidar_publisher()
+
     try:
-        rclpy.spin(lidar_publisher)
+        rclpy.spin(lidar_publisher_node)
+
     except KeyboardInterrupt:
         pass
+
     finally:
-        lidar_publisher.destroy_node()
+        lidar_publisher_node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

@@ -6,10 +6,11 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDur
 import serial
 import logging
 
+
 ## <Parameter> #####################################################################################
 
 # 통신 장치의 경로
-PORT_NAME = "/dev/ttyUSB0"
+PORT_NAME = "/dev/ttyUSB1"
 
 # Baud Rate
 BAUD_RATE = 38400
