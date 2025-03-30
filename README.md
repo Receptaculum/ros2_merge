@@ -13,10 +13,13 @@
 ## 수정 사항
 
 ### ver. 1.0328.1
-- image_publishr, yolov8, car_info_extractor, traffic_light_detector, lidar_publisher, lidar_processpr, lidar_object_detector 추가
+- image_publishr, yolov8, car_info_extractor, traffic_light_detector, lidar_publisher, lidar_processor, lidar_object_detector 추가
 
 ### ver. 1.0329.1
 - serial_communicator에서 음수를 전송할 수 있도록 수정
+
+### ver. 1.0330.1
+- lidar_processor 기능을 lidar_publisher에 통합
 
 ## 계획
 
