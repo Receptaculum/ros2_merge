@@ -1,9 +1,13 @@
+// 지령 메시지 저장소 선언
 char msg[3];
+
+// 제어 명령값 변수 선언
 int8_t steer;
 int8_t left_speed;
 int8_t right_speed;
 
 void setup() {
+  // Serial 통신 설정
   Serial.begin(38400);
 }
 
