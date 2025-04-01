@@ -24,6 +24,9 @@
 ### ver. 1.0330.2
 - lidar_debugger 추가
 
+### ver. 1.0401.1
+- arduino 코드 추가 (미완성)
+
 ## 계획
 
 - motion_planner 추가
