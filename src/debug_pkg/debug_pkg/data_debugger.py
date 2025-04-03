@@ -25,7 +25,7 @@ SUB_TOPIC_NAME_LANE_DATA = "lane_data"
 FRAME_SIZE = [640, 480]
 
 # 범퍼 위치
-BUMPER_POSITION = [324, 460]
+BUMPER_POSITION = [325, 479]
 
 ######################################################################################################
 
@@ -56,10 +56,6 @@ class data_debugger(Node):
     def debug_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg)
 
-        # Bumper 위치
-        cv2.line(img, (BUMPER_POSITION[0], BUMPER_POSITION[1]), (BUMPER_POSITION[0], 0), (255, 0, 0), 3)        
-        cv2.circle(img, [BUMPER_POSITION[0], BUMPER_POSITION[1]], 5, (255, 0, 0), thickness=5)
-
         src_mat = [[227, 323],
                    [407, 323],
                    [487, 440],
@@ -72,6 +68,10 @@ class data_debugger(Node):
 
         # 행렬 변환 연산
         img = bird_view_converter(img, srcmat=src_mat, dstmat=dst_mat)
+
+        # Bumper 위치
+        cv2.line(img, (BUMPER_POSITION[0], BUMPER_POSITION[1]), (BUMPER_POSITION[0], 0), (255, 0, 0), 3)        
+        cv2.circle(img, [BUMPER_POSITION[0], BUMPER_POSITION[1]], 5, (255, 0, 0), thickness=5)
 
         # 수집한 데이터를 화면에 출력
         if self.lane_data != None:

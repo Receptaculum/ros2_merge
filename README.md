@@ -39,5 +39,4 @@
 ## 계획
 
 - motion_planner 추가
-- lane_info_extractor 추가
 - Arduino 최적화
