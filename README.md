@@ -35,8 +35,9 @@
 - CPFL 의존성 제거
 - 코드 최적화
 
+### ver. 1.0403.2
+- LPFL 의존성 제거
 
 ## 계획
-
 - motion_planner 추가
 - Arduino 최적화
