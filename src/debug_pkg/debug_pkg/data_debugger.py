@@ -71,7 +71,7 @@ class data_debugger(Node):
                    [round(FRAME_SIZE[0] * 0.3), round(FRAME_SIZE[1] * 1.0)]]
 
         # 행렬 변환 연산
-        img = bird_convert(img, srcmat=src_mat, dstmat=dst_mat)
+        img = bird_view_converter(img, srcmat=src_mat, dstmat=dst_mat)
 
         # 수집한 데이터를 화면에 출력
         if self.lane_data != None:
@@ -87,19 +87,14 @@ class data_debugger(Node):
         cv2.waitKey(1)
 
 
-def warpping(image, srcmat, dstmat):
-    h, w = (image.shape[0], image.shape[1])
-    transform_matrix = cv2.getPerspectiveTransform(srcmat, dstmat)
-    minv = cv2.getPerspectiveTransform(dstmat, srcmat)
-    _image = cv2.warpPerspective(image, transform_matrix, (w, h))
-    return (_image, minv)
-
-
-def bird_convert(img, srcmat, dstmat):
+def bird_view_converter(img, srcmat, dstmat):
     srcmat = np.float32(srcmat)
     dstmat = np.float32(dstmat)
-    img_warpped, minverse = warpping(img, srcmat, dstmat)
-    return img_warpped
+    transform_mat = cv2.getPerspectiveTransform(srcmat, dstmat)
+
+    img = cv2.warpPerspective(img, transform_mat, (img.shape[1], img.shape[0]))
+
+    return img
 
 
 def main():

@@ -1,15 +1,13 @@
-import cv2
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSHistoryPolicy
 from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
-
-from cv_bridge import CvBridge
-
 from interfaces_pkg.msg import LaneData, SegmentGroup
-from .lib import camera_perception_func_lib as CPFL
+
+import cv2
+from cv_bridge import CvBridge
 
 import numpy as np
 
@@ -63,7 +61,7 @@ class lane_info_extractor(Node):
 
 
     def yolov8_detections_callback(self, msg:SegmentGroup):
-
+        # Lane 정보 수신
         lane1_masks = np.array(msg.lane_1, dtype=int).reshape(-1, 2) 
         lane2_masks = np.array(msg.lane_2, dtype=int).reshape(-1, 2)
 
@@ -71,17 +69,15 @@ class lane_info_extractor(Node):
         if len(msg.lane_1) == 0 and len(msg.lane_2) == 0:
             return
 
-        # CPFL.draw_edges 함수 적출 
+        # 공백 이미지 생성 
         lane1_edge_image = np.zeros((FRAME_SIZE[1], FRAME_SIZE[0]))
         lane2_edge_image = np.zeros((FRAME_SIZE[1], FRAME_SIZE[0]))
 
+        # 도로 선 그리기
         cv2.polylines(lane1_edge_image, [lane1_masks], isClosed=True, color=255, thickness=1, lineType=cv2.LINE_AA)
         cv2.polylines(lane2_edge_image, [lane2_masks], isClosed=True, color=255, thickness=1, lineType=cv2.LINE_AA)
 
         # 변환 행렬 선언
-        (h1, w1) = (lane1_edge_image.shape[0], lane1_edge_image.shape[1]) #(480, 640)
-        (h2, w2) = (lane2_edge_image.shape[0], lane2_edge_image.shape[1]) #(480, 640)
-
         src_mat = [[227, 323],
                    [407, 323],
                    [487, 440],
@@ -94,59 +90,59 @@ class lane_info_extractor(Node):
 
         
         # 행렬 변환 연산
-        lane1_bird_image = CPFL.bird_convert(lane1_edge_image, srcmat=src_mat, dstmat=dst_mat)
-        lane2_bird_image = CPFL.bird_convert(lane2_edge_image, srcmat=src_mat, dstmat=dst_mat)
+        lane1_bird_image = bird_view_converter(lane1_edge_image, srcmat=src_mat, dstmat=dst_mat)
+        lane2_bird_image = bird_view_converter(lane2_edge_image, srcmat=src_mat, dstmat=dst_mat)
 
         # ROI 추출
-        roi_image1 = CPFL.roi_rectangle_below(lane1_bird_image, cutting_idx=300)
-        roi_image2 = CPFL.roi_rectangle_below(lane2_bird_image, cutting_idx=300)
+        roi_image1 = roi_extractor(lane1_bird_image, cutting_idx=300)
+        roi_image2 = roi_extractor(lane2_bird_image, cutting_idx=300)
 
         # 화면 출력
         if self.show_image:
-            #cv2.imshow('lane1_edge_image', lane1_edge_image)
-            #cv2.imshow('lane1_bird_img', lane1_bird_image)
-            cv2.imshow('roi_img1', roi_image1)
-            
-            #cv2.imshow('lane2_edge_image', lane2_edge_image)
-            #cv2.imshow('lane2_bird_img', lane2_bird_image)
-            cv2.imshow('roi_img2', roi_image2)
+            #cv2.imshow('ORIGINAL', np.concatenate((lane1_edge_image, lane2_edge_image), axis=1))
+            #cv2.imshow('BIRD', np.concatenate((lane1_bird_image, lane2_bird_image), axis=1))
+            cv2.imshow('ROI', np.concatenate((roi_image1, roi_image2), axis=1))
 
+            #cv2.imshow('LANE', np.concatenate((np.concatenate((lane1_edge_image, lane2_edge_image), axis=1), np.concatenate((roi_image1, roi_image2), axis=1)), axis=0))
+            
             cv2.waitKey(1)
 
         # 기울기 추출
-        grad1 = CPFL.dominant_gradient(roi_image1, theta_limit=70)
-        grad2 = CPFL.dominant_gradient(roi_image2, theta_limit=70)
+        grad1 = dominant_gradient(roi_image1, theta_limit=70)
+        grad2 = dominant_gradient(roi_image2, theta_limit=70)
 
         # 중심점 추출
         lane1_point_y = 390
-        lane1_point_x = self.get_lane_center(roi_image1, detection_height=lane1_point_y-300, 
+        lane1_point_x = get_lane_center(roi_image1, detection_height=lane1_point_y-300, 
                               detection_thickness=10, road_gradient=grad1, lane_width=300)
         lane2_point_y = 390
-        lane2_point_x = self.get_lane_center(roi_image2, detection_height=lane2_point_y-300, 
+        lane2_point_x = get_lane_center(roi_image2, detection_height=lane2_point_y-300, 
                               detection_thickness=10, road_gradient=grad2, lane_width=300)
 
-        # Message 전송
+        # Message 생성 및 전송
         lane = LaneData()
 
+        # slope
         lane.slope1 = grad1
         lane.slope2 = grad2
 
+        # lane1_x
         if lane1_point_x is not None:
             lane.lane1_x = round(lane1_point_x)
         else:
             lane.lane1_x = 0 # Lane1이 인식되지 않을 경우 왼쪽 끝으로 고정
 
-
+        # lane1_y
         if lane1_point_y is not None:
             lane.lane1_y = round(lane1_point_y)
 
-
+        # lane2_x
         if lane2_point_x is not None:
             lane.lane2_x = round(lane2_point_x)
         else:
             lane.lane2_x = FRAME_SIZE[0] - 1 # Lane2가 인식되지 않을 경우 오른쪽 끝으로 고정
 
-
+        # lane2_y
         if lane2_point_y is not None:
             lane.lane2_y = round(lane2_point_y)
 
@@ -155,7 +151,65 @@ class lane_info_extractor(Node):
 
         self.publisher.publish(lane)
 
-    def get_lane_center(self,cv_image: np.array, detection_height: int, detection_thickness: int, road_gradient: float, lane_width: int) -> int:
+    
+def bird_view_converter(img, srcmat, dstmat):
+        srcmat = np.float32(srcmat)
+        dstmat = np.float32(dstmat)
+        transform_mat = cv2.getPerspectiveTransform(srcmat, dstmat)
+
+        img = cv2.warpPerspective(img, transform_mat, (img.shape[1], img.shape[0]))
+
+        return img
+
+
+def roi_extractor(img, cutting_idx):
+    return img[cutting_idx:]
+ 
+
+def dominant_gradient(image, theta_limit):
+    right_limit_radian = np.deg2rad(90 + (90 - theta_limit))
+    left_limit_radian = np.deg2rad(90 - (90 - theta_limit))
+    height, width = (image.shape[0], image.shape[1])
+    if image.dtype != np.uint8:
+        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
+    image_original = image.copy()
+    try:
+        lines = cv2.HoughLines(image, 1, np.pi / 180, int(width * 0.0390625))
+        angles = []
+        if lines is not None:
+            for line in lines:
+                for rho, theta in line:
+                    a = np.cos(theta)
+                    b = np.sin(theta)
+                    x0 = a * rho
+                    y0 = b * rho
+                    x1 = int(x0 + 1000 * -b)
+                    y1 = int(y0 + 1000 * a)
+                    x2 = int(x0 - 1000 * -b)
+                    y2 = int(y0 - 1000 * a)
+                    if theta < right_limit_radian and theta > left_limit_radian:
+                        continue
+                    angle = np.arctan((x2 - x1) / (y1 - y2)) * 180 / np.pi
+                    angles.append(angle)
+                    cv2.line(image_original, (x1, y1), (x2, y2), (255, 255, 255))
+        if len(angles) == 0:
+            result = 0.0
+            return result
+        result = np.median(angles)
+        return result
+    except Exception as e:
+        _, _, tb = sys.exc_info()
+        print(f'gradient detection error = {e}, error line = {tb.tb_lineno}')
+        exception_image_path = './exception_image/'
+        try:
+            if not os.path.exists(exception_image_path):
+                os.mkdir(exception_image_path)
+        except OSError:
+            print('Error: Creating directory. ' + exception_image_path)
+        return (0, None)
+
+
+def get_lane_center(cv_image: np.array, detection_height: int, detection_thickness: int, road_gradient: float, lane_width: int) -> int:
         detection_area_upper_bound = detection_height - int(detection_thickness/2)
         detection_area_lower_bound = detection_height + int(detection_thickness/2)
 
@@ -216,5 +270,6 @@ def main(args=None):
         cv2.destroyAllWindows()
         rclpy.shutdown()
   
+
 if __name__ == '__main__':
     main()

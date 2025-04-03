@@ -31,6 +31,10 @@
 - lane_info_extractor 코드 통합
 - data_debugger 기능 추가
 
+### ver. 1.0403.2
+- CPFL 의존성 제거
+- 코드 최적화
+
 
 ## 계획
 

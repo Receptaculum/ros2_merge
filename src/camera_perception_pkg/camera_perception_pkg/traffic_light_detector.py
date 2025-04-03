@@ -71,7 +71,7 @@ class TrafficLightDetector(Node):
     def image_callback(self, msg):
         img = self.cv_bridge.imgmsg_to_cv2(msg)
 
-        tl_val = self.get_traffic_light_color(img, self.seg_data, self.hsv_ranges) 
+        tl_val = get_traffic_light_color(img, self.seg_data, self.hsv_ranges) 
 
         color_msg = String()
         color_msg.data = tl_val
@@ -80,45 +80,45 @@ class TrafficLightDetector(Node):
         self.get_logger().info(f'traffic light: {color_msg.data}') 
 
 
-    def get_traffic_light_color(self, cv_image, xyxy, hsv_ranges):
-        if len(xyxy) == 0:
-            return 'N'
-
-        else:        
-            x_min, y_min, x_max, y_max = xyxy
-
-        roi = cv_image[y_min:y_max, x_min:x_max]       
-        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-
-        red_lower1, red_upper1 = hsv_ranges['red1']
-        red_lower2, red_upper2 = hsv_ranges['red2']
-        yellow_lower, yellow_upper = hsv_ranges['yellow']
-        green_lower, green_upper = hsv_ranges['green']
-        
-        red_mask1 = cv2.inRange(hsv_roi, red_lower1, red_upper1)
-        red_mask2 = cv2.inRange(hsv_roi, red_lower2, red_upper2)
-        red_mask = red_mask1 + red_mask2
-
-        yellow_mask = cv2.inRange(hsv_roi, yellow_lower, yellow_upper)
-        
-        green_mask = cv2.inRange(hsv_roi, green_lower, green_upper)
-        
-        red_ratio = cv2.countNonZero(red_mask) / (roi.size / 3)
-        yellow_ratio = cv2.countNonZero(yellow_mask) / (roi.size / 3)
-        green_ratio = cv2.countNonZero(green_mask) / (roi.size / 3)
-        
-        max_ratio = max(red_ratio, yellow_ratio, green_ratio)
-
-        if max_ratio == red_ratio:
-            return 'R'
-        
-        if max_ratio == yellow_ratio:
-            return 'Y'
-        
-        if max_ratio == green_ratio:
-            return 'G'
-        
+def get_traffic_light_color(cv_image, xyxy, hsv_ranges):
+    if len(xyxy) == 0:
         return 'N'
+
+    else:        
+        x_min, y_min, x_max, y_max = xyxy
+
+    roi = cv_image[y_min:y_max, x_min:x_max]       
+    hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    red_lower1, red_upper1 = hsv_ranges['red1']
+    red_lower2, red_upper2 = hsv_ranges['red2']
+    yellow_lower, yellow_upper = hsv_ranges['yellow']
+    green_lower, green_upper = hsv_ranges['green']
+        
+    red_mask1 = cv2.inRange(hsv_roi, red_lower1, red_upper1)
+    red_mask2 = cv2.inRange(hsv_roi, red_lower2, red_upper2)
+    red_mask = red_mask1 + red_mask2
+
+    yellow_mask = cv2.inRange(hsv_roi, yellow_lower, yellow_upper)
+        
+    green_mask = cv2.inRange(hsv_roi, green_lower, green_upper)
+        
+    red_ratio = cv2.countNonZero(red_mask) / (roi.size / 3)
+    yellow_ratio = cv2.countNonZero(yellow_mask) / (roi.size / 3)
+    green_ratio = cv2.countNonZero(green_mask) / (roi.size / 3)
+        
+    max_ratio = max(red_ratio, yellow_ratio, green_ratio)
+
+    if max_ratio == red_ratio:
+        return 'R'
+        
+    if max_ratio == yellow_ratio:
+        return 'Y'
+        
+    if max_ratio == green_ratio:
+        return 'G'
+        
+    return 'N'
 
 
 def main(args=None):
