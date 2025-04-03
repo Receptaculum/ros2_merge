@@ -27,6 +27,11 @@
 ### ver. 1.0401.1
 - arduino 코드 추가 (미완성)
 
+### ver. 1.0403.1
+- lane_info_extractor 코드 통합
+- data_debugger 기능 추가
+
+
 ## 계획
 
 - motion_planner 추가

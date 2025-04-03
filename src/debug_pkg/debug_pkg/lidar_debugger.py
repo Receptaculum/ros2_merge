@@ -110,9 +110,9 @@ class lidar_debugger(Node):
 
         if self.bool == True:
             (_, h), _ = cv2.getTextSize(text = "Detected",
-                                                                  fontFace = cv2.FONT_HERSHEY_COMPLEX, 
-                                                                  fontScale=1,
-                                                                  thickness=1)
+                                        fontFace = cv2.FONT_HERSHEY_COMPLEX, 
+                                        fontScale=1,
+                                        thickness=1)
 
             cv2.putText(img = background,
                         text = "Detected",
