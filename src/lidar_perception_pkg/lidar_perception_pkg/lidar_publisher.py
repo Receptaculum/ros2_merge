@@ -7,13 +7,15 @@ from rclpy.qos import QoSHistoryPolicy
 from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
 
-import tf2_ros
-import geometry_msgs.msg
-
-from .lib import lidar_perception_func_lib as LPFL
 import numpy as np
 
 import logging
+import sys
+import os
+
+#### These modules are unused
+# import tf2_ros
+# import geometry_msgs.msg
 
 
 ## <Parameter> #######################################################################################
@@ -55,7 +57,7 @@ class lidar_publisher(Node):
         self.lidar_sensor_data_generator = None
 
         # 좌표 변환 모듈 선언 (Unused)
-        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        # self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # Timer 선언
         self.timer = self.create_timer(PERIOD, self.publish_lidar_data)
@@ -69,24 +71,25 @@ class lidar_publisher(Node):
 
 
     def initialize_lidar(self):
-        # Initialize the RPLidar
+        # LIDAR 초기화
         try:
-            self.lidar = LPFL.RPLidar(LIDAR_PORT)
+            self.lidar = rplidar.RPLidar(LIDAR_PORT)
             self.lidar_sensor_data_generator = self.lidar.iter_scans()
 
-        except LPFL.RPLidarException as e:
+        except rplidar.RPLidarException as e:
             self.get_logger().error(f'Failed to initialize LIDAR: {e}')
             self.destroy_node()
             rclpy.shutdown()
     
 
     def reset_lidar(self):
-        # Reset the LIDAR connection and data generator
+        # LIDAR 재시작
         try:
             self.lidar.stop()
             self.lidar.stop_motor()
             self.lidar.disconnect()
-        except LPFL.RPLidarException as e:
+
+        except rplidar.RPLidarException as e:
             self.get_logger().error(f'Failed to reset LIDAR: {e}')
         
         self.initialize_lidar()
@@ -94,16 +97,16 @@ class lidar_publisher(Node):
 
     def publish_lidar_data(self):
         # 좌표 변환 모듈 관련 파라미터 (Unused)
-        transform = geometry_msgs.msg.TransformStamped()
-        transform.header.stamp = self.get_clock().now().to_msg()
-        transform.header.frame_id = 'base_link'
-        transform.child_frame_id = 'laser_frame'
-        transform.transform.translation.x = 0.0
-        transform.transform.translation.y = 0.0
-        transform.transform.translation.z = 0.0
+        # transform = geometry_msgs.msg.TransformStamped()
+        # transform.header.stamp = self.get_clock().now().to_msg()
+        # transform.header.frame_id = 'base_link'
+        # transform.child_frame_id = 'laser_frame'
+        # transform.transform.translation.x = 0.0
+        # transform.transform.translation.y = 0.0
+        # transform.transform.translation.z = 0.0
 
         # 좌표 변환 데이터 전송 (Unused)
-        self.tf_broadcaster.sendTransform(transform)
+        # self.tf_broadcaster.sendTransform(transform)
 
         try:
             scan = next(self.lidar_sensor_data_generator)
@@ -139,8 +142,8 @@ class lidar_publisher(Node):
             msg.intensities = intensities
 
             # 변환된 데이터 추출
-            msg_proc = LPFL.rotate_lidar_data(msg, offset = 0) # offset = 0 ~ 359
-            msg_proc = LPFL.flip_lidar_data(msg_proc, pivot_angle = 0) # pivot_angle = 0 ~ 359
+            msg_proc = flip_lidar_data(msg, pivot_angle = 0) # pivot_angle = 0 ~ 359
+            msg_proc = rotate_lidar_data(msg_proc, offset = 0) # offset = 0 ~ 359
 
             # 배포
             self.publisher.publish(msg) # 변환 전 데이터
@@ -152,7 +155,7 @@ class lidar_publisher(Node):
             self.get_logger().error('Failed to get lidar scan')
             return
         
-        except LPFL.RPLidarException as e:
+        except rplidar.RPLidarException as e:
             self.get_logger().error(f'RPLidar exception: {e}')
             self.reset_lidar()
             
@@ -162,15 +165,48 @@ class lidar_publisher(Node):
 
 
     def __del__(self):
-        # Destructor to ensure LIDAR is properly shut down
+        # LIDAR 가동 정지
         try:
             if self.lidar:
                 self.lidar.stop()
                 self.lidar.stop_motor()
                 self.lidar.disconnect()
 
-        except LPFL.RPLidarException as e:
+        except rplidar.RPLidarException as e:
             self.get_logger().error(f'Failed to properly shutdown LIDAR: {e}')
+
+
+def rotate_lidar_data(msg, offset=0):
+    offset = int(offset)
+
+    if offset < 0 or offset >= 360:
+        raise ValueError('offset must be between 0 and 359')
+    
+    msg.ranges = msg.ranges[offset:] + msg.ranges[:offset]
+    msg.intensities = msg.intensities[offset:] + msg.intensities[:offset]
+
+    return msg
+
+
+def flip_lidar_data(msg, pivot_angle):
+    pivot_angle = int(pivot_angle)
+
+    if pivot_angle < 0 or pivot_angle >= 360:
+        raise ValueError('pivot_angle must be between 0 and 359')
+    
+    length = len(msg.ranges)
+    flipped_ranges = [0] * length
+    flipped_intensities = [0] * length
+
+    for i in range(length):
+        new_angle = (2 * pivot_angle - i) % length
+        flipped_ranges[new_angle] = msg.ranges[i]
+        flipped_intensities[new_angle] = msg.intensities[i]
+
+    msg.ranges = flipped_ranges
+    msg.intensities = flipped_intensities
+    
+    return msg
 
 
 def main(args=None):
@@ -189,4 +225,18 @@ def main(args=None):
 
 
 if __name__ == '__main__':
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+    #### Following module is provided by vendor
+    #### https://github.com/Roboticia/RPLidar/blob/master/rplidar.py
+    from lib import rplidar
+    
+    main()
+
+
+else:
+    #### Following module is provided by vendor
+    #### https://github.com/Roboticia/RPLidar/blob/master/rplidar.py
+    from .lib import rplidar
+
     main()
