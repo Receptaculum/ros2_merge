@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+        'motion_planner = decision_making_pkg.motion_planner:main',
         ],
     },
 )
