@@ -122,9 +122,12 @@ class lane_info_extractor(Node):
         # Message 생성 및 전송
         lane = LaneData()
 
-        # slope
-        lane.slope1 = grad1
-        lane.slope2 = grad2
+        # slope (None일 경우 기울기는 0으로 상정됨)
+        if grad1 is not None:
+            lane.slope1 = grad1
+    
+        if grad2 is not None:
+            lane.slope2 = grad2
 
         # lane1_x
         if lane1_point_x is not None:

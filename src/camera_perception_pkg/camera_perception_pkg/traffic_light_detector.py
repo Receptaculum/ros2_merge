@@ -73,6 +73,7 @@ class TrafficLightDetector(Node):
 
         tl_val = get_traffic_light_color(img, self.seg_data, self.hsv_ranges) 
 
+        # 메시지 전송
         color_msg = String()
         color_msg.data = tl_val
         self.publisher.publish(color_msg)

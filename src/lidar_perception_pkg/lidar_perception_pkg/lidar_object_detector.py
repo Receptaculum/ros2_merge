@@ -80,12 +80,11 @@ class lidar_object_detector(Node):
         # 감지 카운트
         detection_result = self.check_consecutive_detections(detected, COUNT)
 
-        # 메시지 생성 및 전송
+        # 메시지 전송
         detection_msg = Bool()
         detection_msg.data = detection_result
         self.publisher.publish(detection_msg)
 
-        # 로깅 데이터 기록
         self.get_logger().info(f'Detection Result = {detection_result}')
 
 

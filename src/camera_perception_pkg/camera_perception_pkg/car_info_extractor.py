@@ -51,9 +51,14 @@ class CarDetector(Node):
     def yolov8_detections_callback(self, detection_msg: SegmentGroup):
         car_bbox = detection_msg.car  # int32[] 형태
 
-        if not car_bbox or len(car_bbox) % 4 != 0:
-            return  # 데이터가 없거나, 좌표 개수가 4의 배수가 아니라면 return
+        # Message 선언
         car_data = CarData()
+
+        # 데이터가 없거나, 좌표 개수가 4의 배수가 아니라면 return
+        if not car_bbox or len(car_bbox) % 4 != 0:
+            self.get_logger().info(f"x = {car_data.x} | y = {car_data.y}")
+            self.publisher.publish(car_data)          
+            return  
 
         # 4개씩 묶어서 (x1, y1, x2, y2) 좌표 추출
         for i in range(0, len(car_bbox), 4):
@@ -66,7 +71,7 @@ class CarDetector(Node):
             car_data.x.append(car_center_x)
             car_data.y.append(car_center_y)
 
-        # 결과 publish
+        # 결과 Publish
         self.get_logger().info(f"x = {car_data.x} | y = {car_data.y}")
         self.publisher.publish(car_data)
 

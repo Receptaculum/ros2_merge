@@ -38,6 +38,9 @@
 ### ver. 1.0403.2
 - LPFL 의존성 제거
 
+### ver. 1.0404.1
+- motion_planner 추가 및 기본 골격 형성
+
 ## 계획
 - motion_planner 추가
 - Arduino 최적화
