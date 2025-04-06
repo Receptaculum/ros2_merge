@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8MultiArray
+from std_msgs.msg import Int8MultiArray, UInt16
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import serial
@@ -10,7 +10,7 @@ import logging
 ## <Parameter> #####################################################################################
 
 # 통신 장치의 경로
-PORT_NAME = "/dev/ttyUSB1"
+PORT_NAME = "/dev/ttyACM0"
 
 # Baud Rate
 BAUD_RATE = 38400
@@ -20,6 +20,12 @@ NODE_NAME = "serial_communicator"
 
 # 구독 토픽 이름
 SUB_TOPIC_NAME = "command_data"
+
+# 발행 토픽 이름
+PUB_TOPIC_NAME = "arduino_data"
+
+# Receiver 타이머 설정
+TIMER = 0.1
 
 # 로깅 여부
 LOG = True
@@ -46,13 +52,20 @@ LOG = True
 
 
 class serial_communicator(Node):
-    def __init__(self, node_name, port_name, baud_rate, sub_topic_name, log):
+    def __init__(self, node_name, port_name, baud_rate, sub_topic_name, pub_topic_name, log):
         super().__init__(node_name)
 
         # Serial 통신을 위한 Class 선언
         self.serial = serial.Serial(port_name, baud_rate, rtscts=False)
 
-        self.qos = QoSProfile( # QOS 설정
+        self.qos_sub = QoSProfile( # QOS 설정
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                durability=QoSDurabilityPolicy.VOLATILE,
+                history=QoSHistoryPolicy.KEEP_LAST,
+                depth=1
+                )
+        
+        self.qos_pub = QoSProfile( # QOS 설정
                 reliability=QoSReliabilityPolicy.RELIABLE,
                 durability=QoSDurabilityPolicy.VOLATILE,
                 history=QoSHistoryPolicy.KEEP_LAST,
@@ -60,7 +73,13 @@ class serial_communicator(Node):
                 )
         
         # 지령값 구독
-        self.subscriber = self.create_subscription(Int8MultiArray, sub_topic_name, self.send_callback, self.qos)
+        self.subscriber = self.create_subscription(Int8MultiArray, sub_topic_name, self.send_callback, self.qos_sub)
+
+        # 아두이노 전송값 확인
+        self.timer = self.create_timer(TIMER, self.receive_callback)
+
+        # 아두이노 전송값 배포
+        self.publisher = self.create_publisher(UInt16, pub_topic_name, self.qos_pub)
 
         # 로깅 여부 설정
         if log == False: 
@@ -86,9 +105,18 @@ class serial_communicator(Node):
         self.get_logger().info(f"{msg}")
 
 
+    def receive_callback(self):
+        if self.serial.in_waiting >= 2:
+            data = int.from_bytes(self.serial.read(2), byteorder='big', signed=False)
+        
+            msg = UInt16()
+            msg.data = data
+            self.publisher.publish(msg)
+
+
 def main():
     rclpy.init()
-    serial_node = serial_communicator(NODE_NAME, PORT_NAME, BAUD_RATE, SUB_TOPIC_NAME, LOG)
+    serial_node = serial_communicator(NODE_NAME, PORT_NAME, BAUD_RATE, SUB_TOPIC_NAME, PUB_TOPIC_NAME, LOG)
     rclpy.spin(serial_node)
 
     serial_node.destroy_node()
