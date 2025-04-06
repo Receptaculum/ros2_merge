@@ -41,6 +41,9 @@
 ### ver. 1.0404.1
 - motion_planner 추가 및 기본 골격 형성
 
+### ver. 1.0406.1
+- motion_planner의 lane change state 알고리즘 개선
+
 ## 계획
 - motion_planner 추가
 - Arduino 최적화
