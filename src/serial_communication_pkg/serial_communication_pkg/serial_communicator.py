@@ -102,7 +102,7 @@ class serial_communicator(Node):
         msg = int(msg_hex, 16).to_bytes(3, byteorder='big', signed=False)  
 
         self.serial.write(msg)
-        self.get_logger().info(f"{msg}")
+        self.get_logger().info(f"TX: {msg}")
 
 
     def receive_callback(self):
@@ -112,6 +112,7 @@ class serial_communicator(Node):
             msg = UInt16()
             msg.data = data
             self.publisher.publish(msg)
+            self.get_logger().info(f"RX: {data}")
 
 
 def main():

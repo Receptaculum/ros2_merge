@@ -48,5 +48,5 @@
 - UART 수신 데이터를 arduino_data Topic으로 전송하는 기능 추가
 
 ## 계획
-- motion_planner 추가
+- motion_planner State 추가 및 개선
 - Arduino 최적화
