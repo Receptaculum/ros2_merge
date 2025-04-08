@@ -112,10 +112,10 @@ class lane_info_extractor(Node):
         grad2 = dominant_gradient(roi_image2, theta_limit=70)
 
         # 중심점 추출
-        lane1_point_y = 390
+        lane1_point_y = 450
         lane1_point_x = get_lane_center(roi_image1, detection_height=lane1_point_y-300, 
                               detection_thickness=10, road_gradient=grad1, lane_width=300)
-        lane2_point_y = 390
+        lane2_point_y = 450
         lane2_point_x = get_lane_center(roi_image2, detection_height=lane2_point_y-300, 
                               detection_thickness=10, road_gradient=grad2, lane_width=300)
 
