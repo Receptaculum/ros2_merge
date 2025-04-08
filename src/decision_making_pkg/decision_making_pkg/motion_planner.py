@@ -226,29 +226,29 @@ class motion_planner(Node):
         if self.lane_state == 1:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 200,
+                                                        vehicle_speed = 100,
                                                         path_slope = self.lane_data.slope1)
            # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+               self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
 
         # 2차선에 있을 경우, 속도 및 조향 설정
         elif self.lane_state == 2:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 200,
+                                                        vehicle_speed = 100,
                                                         path_slope = self.lane_data.slope2)
            # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 200, right_speed = 200) 
+               self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
 
         # 계속 주행
         return 1
