@@ -50,6 +50,9 @@
 ### ver. 1.0408.1
 - 주행 알고리즘 개선
 
+### ver. 1.0412.1
+- driving_algorithm 디렉터리 생성 (각 mission별 motion_planner.py 관리를 위함)
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
