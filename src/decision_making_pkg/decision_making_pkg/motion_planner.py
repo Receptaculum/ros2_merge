@@ -162,7 +162,8 @@ class motion_planner(Node):
                 self.state = self.stop_mode()
 
         except Exception as e:
-            self.get_logger().warn(e)
+            self.get_logger().warn(f"{e}")
+            pass
 
 
 ### <State 정의 함수> ####################################################################
