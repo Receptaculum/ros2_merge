@@ -53,6 +53,9 @@
 ### ver. 1.0412.1
 - driving_algorithm 디렉터리 생성 (각 mission별 motion_planner.py 관리를 위함)
 
+### ver. 1.0412.2
+- launch 파일 생성을 위한 execution_pkg 생성
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
