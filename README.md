@@ -56,6 +56,9 @@
 ### ver. 1.0412.2
 - launch 파일 생성을 위한 execution_pkg 생성
 
+### ver. 1.0412.3
+- crosswalk와 traffic_light에 대한 카운트 기능 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
