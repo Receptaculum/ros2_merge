@@ -59,6 +59,9 @@
 ### ver. 1.0412.3
 - crosswalk와 traffic_light에 대한 카운트 기능 추가
 
+### ver. 1.0415.1
+- mission 2에 대한 motion_planner 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
