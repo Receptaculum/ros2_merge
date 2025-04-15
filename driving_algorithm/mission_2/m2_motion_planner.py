@@ -200,12 +200,12 @@ class motion_planner(Node):
             
             for x in self.car_data.x:
                 # 차량 중앙점과 차선 중앙점 간 거리 계산
-                if self.lane_data.lane1_x > 20:
+                if self.lane_data.lane1_x > 40:
                     d1 = abs(x - self.lane_data.lane1_x)
                 else:
                     d1 = abs(x - (self.lane_data.lane1_x - 50))                    
 
-                if self.lane_data.lane2_x < 620:
+                if self.lane_data.lane2_x < 600:
                     d2 = abs(x - self.lane_data.lane2_x)
                 else:
                     d2 = abs(x - (self.lane_data.lane2_x + 50))                   
@@ -309,7 +309,7 @@ class motion_planner(Node):
                 if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
                     # 정지
                     return 3
-
+                
             # 대기 상태 (계속 주행)
             else:
                 pass
@@ -321,7 +321,7 @@ class motion_planner(Node):
             # 1차선에 차량이 없는 경우
             if not self.car_1:
                 # 2차선 차량 위치가 100 이상인 경우 (차량이 근접한 경우)
-                if self.car_data.y[self.car_location_data.index(2)] > 100:
+                if self.car_data.y[self.car_location_data.index(2)] > 120:
                     # 차선 변경
                     return 2 
                 # 대기 상태 (계속 주행)
@@ -331,7 +331,7 @@ class motion_planner(Node):
             # 1차선에 차량이 있는 경우
             elif self.car_1:
                 # 진행 및 추월이 불가능한 경우
-               if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
+                if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
                     # 정지
                     return 3
 
