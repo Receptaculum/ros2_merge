@@ -88,11 +88,9 @@ class motion_planner(Node):
         self.steer_angle_reg = 0 # send_command 함수에서 사용
         self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
-        self.car_gap_reg = [] # update_car_data 함수에서 사용
 
         # 카운트 저장소 선언
         self.cnt = 0
-        self.cnt_for_car = 0
 
 
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
@@ -101,25 +99,7 @@ class motion_planner(Node):
         self.car_data = msg # car position
 
         # 차량 존재 여부 업데이트
-        self.car_1, self.car_2, self.car_location_data, car_gap = self.extract_car_data()
-
-        # 차량간 거리 데이터 기록 (None이 아닌 경우에만 기록)
-        if car_gap != None:
-            self.car_gap_reg.append(car_gap)
-            self.cnt_for_car = 0
-
-        # None 출력 횟수 카운트 
-        else:
-            self.cnt_for_car += 1
-
-        # 장기간 입력이 없는 경우, 메모리 초기화 실행 
-        if self.cnt_for_car >= 5 and len(self.car_gap_reg) > 0:
-            self.car_gap_reg = []
-            self.cnt_for_car = 0
-
-        # 5개로 Register 크기 제한
-        if len(self.car_gap_reg) > 5:
-            self.car_gap_reg.pop(0)
+        self.car_1, self.car_2, self.car_location_data = self.extract_car_data()
 
 #######################################################################
 
@@ -196,19 +176,56 @@ class motion_planner(Node):
             car_1 = False
             car_2 = False
             car_location_data = []
-            car_gap = None
             
-            for x in self.car_data.x:
-                # 차량 중앙점과 차선 중앙점 간 거리 계산
-                if self.lane_data.lane1_x > 40:
-                    d1 = abs(x - self.lane_data.lane1_x)
-                else:
-                    d1 = abs(x - (self.lane_data.lane1_x - 50))                    
+            # Lane 1
+            try:
+                lane_1 = np.array(self.yolo_data.lane_1).reshape(-1, 2)
 
-                if self.lane_data.lane2_x < 600:
-                    d2 = abs(x - self.lane_data.lane2_x)
+                y_min = np.min(lane_1[:, 1])
+                temp = lane_1[(y_min <= lane_1[:, 1]) & (lane_1[:, 1] <= y_min + 10)]
+
+                # 도로 상단부 좌우측 좌표값 추출
+                x_1_min, y_1_min = temp[np.argmin(temp[:, 0])]
+                x_1_max, y_1_max = temp[np.argmax(temp[:, 0])]
+
+                # 회전 구간에서 도로가 완전하게 보이지 않는 경우를 제거하기 위한 조건
+                if abs(x_1_min - x_1_max) > 50:
+                    x_1 = (x_1_min + x_1_max)/2
+
                 else:
-                    d2 = abs(x - (self.lane_data.lane2_x + 50))                   
+                    x_1 = 0                   
+  
+            # Lane 1이 보이지 않을 경우
+            except:
+                x_1 = 0
+
+            # Lane 2 
+            try:
+                lane_2 = np.array(self.yolo_data.lane_2).reshape(-1, 2)
+
+                y_min = np.min(lane_2[:, 1])
+                temp = lane_2[(y_min <= lane_2[:, 1]) & (lane_2[:, 1] <= y_min + 10)]
+
+                # 도로 상단부 좌우측 좌표값 추출
+                x_2_min, y_2_min = temp[np.argmin(temp[:, 0])]
+                x_2_max, y_2_max = temp[np.argmax(temp[:, 0])]
+
+                # 회전 구간에서 도로가 완전하게 보이지 않는 경우를 제거하기 위한 조건
+                if abs(x_2_min - x_2_max) > 50:
+                    x_2 = (x_2_min + x_2_max)/2
+
+                else:
+                    x_2 = 640
+
+            # Lane 2가 보이지 않을 경우
+            except:
+                x_2 = 640        
+
+            
+            for x, y in list(zip(self.car_data.x, self.car_data.y)):
+                # 거리 비교
+                d1 = abs(x - x_1)                
+                d2 = abs(x - x_2)
 
                 # 2차선에 위치한 경우
                 if d1 > d2:
@@ -220,10 +237,9 @@ class motion_planner(Node):
                     car_1 = True
                     car_location_data.append(1)
 
-            if len(self.car_data.y) >= 2:
-                car_gap = abs(self.car_data.y[0] - self.car_data.y[1])
+            # self.get_logger().info(f"detect: {car_1} {car_2}")
 
-            return car_1, car_2, car_location_data, car_gap
+            return car_1, car_2, car_location_data
 
 
     # 판단 로직 작성부
@@ -293,18 +309,14 @@ class motion_planner(Node):
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
             # 2차선에 차량이 없는 경우
-            if not self.car_2:
-                # 1차선 차량 위치가 100 이상인 경우 (차량이 근접한 경우)
+            if self.car_2 == False:
+                # 1차선 차량 위치가 240 이상인 경우 (차량이 근접한 경우)
                 if self.car_data.y[self.car_location_data.index(1)] > 240:
                     # 차선 변경
-                    return 2 
-                # 대기 상태 (계속 주행)
-                else:
-                    pass
-                
+                    return 2                 
 
             # 2차선에 차량이 있는 경우
-            elif self.car_2:
+            elif self.car_2 == True:
                 # 진행 및 추월이 불가능한 경우
                 if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
                     # 정지
@@ -319,17 +331,14 @@ class motion_planner(Node):
         # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
         if self.car_2 and self.lane_state == 2:
             # 1차선에 차량이 없는 경우
-            if not self.car_1:
-                # 2차선 차량 위치가 100 이상인 경우 (차량이 근접한 경우)
-                if self.car_data.y[self.car_location_data.index(2)] > 120:
+            if self.car_1 == False:
+                # 2차선 차량 위치가 240 이상인 경우 (차량이 근접한 경우)
+                if self.car_data.y[self.car_location_data.index(2)] > 240:
                     # 차선 변경
                     return 2 
-                # 대기 상태 (계속 주행)
-                else:
-                    pass
 
             # 1차선에 차량이 있는 경우
-            elif self.car_1:
+            elif self.car_1 == True:
                 # 진행 및 추월이 불가능한 경우
                 if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
                     # 정지
