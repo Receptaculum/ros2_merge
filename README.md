@@ -62,6 +62,9 @@
 ### ver. 1.0415.1
 - mission 2에 대한 motion_planner 추가
 
+### ver. 1.0416.1
+- car_info에서 area를 추출할 수 있는 기능 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

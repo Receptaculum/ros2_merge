@@ -68,8 +68,13 @@ class CarDetector(Node):
             car_center_x = (x1 + x2) / 2.0
             car_center_y = (y1 + y2) / 2.0
 
+            # 면적 계산 (정규화 포함)
+            car_area = abs(x1 - x2) * abs(y1 - y2) / (640*480)
+
+            # 메시지에 데이터 추가
             car_data.x.append(car_center_x)
             car_data.y.append(car_center_y)
+            car_data.area.append(car_area)
 
         # 결과 Publish
         self.get_logger().info(f"x = {car_data.x} | y = {car_data.y}")
