@@ -20,10 +20,13 @@ from .lib.depth_estimator.depth_estimator import depth_estimator
 SUB_TOPIC_NAME = "image_publisher"
 
 # 배포 토픽 이름
-PUB_TOPIC_NAME = "none"
+PUB_TOPIC_NAME = "depth_data"
 
 # 로깅 여부
 LOG = True
+
+# 화면 출력
+DEBUG = True
 
 ######################################################################################################
 
@@ -31,9 +34,6 @@ LOG = True
 class DepthExtractor(Node):
     def __init__(self):
         super().__init__('car_info_extractor')
-
-        self.sub_topic = self.declare_parameter('sub_detection_topic', SUB_TOPIC_NAME).value
-        #self.pub_topic = self.declare_parameter('pub_topic', PUB_TOPIC_NAME).value
 
         # QoS settings
         self.qos_profile = QoSProfile(
@@ -43,8 +43,8 @@ class DepthExtractor(Node):
             depth=1
         )
         
-        self.subscriber = self.create_subscription(Image, self.sub_topic, self.depth_estimation_callback, self.qos_profile)
-        #self.publisher = self.create_publisher(CarData, self.pub_topic, self.qos_profile)
+        self.subscriber = self.create_subscription(Image, SUB_TOPIC_NAME, self.depth_estimation_callback, self.qos_profile)
+        self.publisher = self.create_publisher(Image, PUB_TOPIC_NAME, self.qos_profile)
         
         # CV Bridge Object 선언
         self.bridge = cv_bridge.CvBridge() 
@@ -59,9 +59,11 @@ class DepthExtractor(Node):
         frame = depth_estimator(self.bridge.imgmsg_to_cv2(msg))
         frame = cv2.normalize(frame, None, 0, 1, cv2.NORM_MINMAX)
  
-        print(frame)
-        cv2.imshow("DEPTH", frame)
-        cv2.waitKey(5)
+        if DEBUG == True:
+            cv2.imshow("DEPTH", frame)
+            cv2.waitKey(5)
+
+        self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
 
 
 def main(args=None):
