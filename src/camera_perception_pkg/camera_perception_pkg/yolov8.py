@@ -1,3 +1,7 @@
+#################
+# 전방 카메라 전용 #
+#################
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -41,7 +45,7 @@ LOG = True
 DEVICE = "cpu"
 
 # Thread 수 (CPU 전용, 본인의 CPU Core 수보다 약간 적게 설정)
-THREAD = 8
+THREAD = 4
 
 ######################################################################################################
 

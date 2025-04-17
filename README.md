@@ -68,6 +68,9 @@
 ### ver. 1.0416.2
 - 차량 차선 존재 여부 판단 기능 개선
 
+### ver. 1.0417.1
+- MIDAS 기반 영상 깊이 추정 Node 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

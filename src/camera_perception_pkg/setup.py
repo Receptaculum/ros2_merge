@@ -24,7 +24,8 @@ setup(
             'yolov8 = camera_perception_pkg.yolov8:main',
             'car_info_extractor = camera_perception_pkg.car_info_extractor:main',
             'traffic_light_detector = camera_perception_pkg.traffic_light_detector:main',
-            'lane_info_extractor = camera_perception_pkg.lane_info_extractor:main'
+            'lane_info_extractor = camera_perception_pkg.lane_info_extractor:main',
+            'depth_extractor = camera_perception_pkg.depth_extractor:main',
         ],
     },
 )

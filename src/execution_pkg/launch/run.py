@@ -40,6 +40,11 @@ def generate_launch_description():
             output='screen'
         ),
        
+        Node(
+            package='camera_perception_pkg', 
+            executable='depth_extractor',
+            output='screen'
+        ),
 
         Node(
             package='decision_making_pkg', 
