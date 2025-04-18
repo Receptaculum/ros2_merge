@@ -119,7 +119,7 @@ class DepthExtractor(Node):
 
         if DEBUG == True:
             frame = cv2.normalize(frame, None, 0, 1, cv2.NORM_MINMAX)
-            cv2.imshow("DEPTH", frame)
+            cv2.imshow("MIDAS", frame)
             cv2.waitKey(5)
 
         self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
