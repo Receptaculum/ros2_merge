@@ -47,6 +47,9 @@ DEVICE = "cpu"
 # Thread 수 (CPU 전용, 본인의 CPU Core 수보다 약간 적게 설정)
 THREAD = 8
 
+# RGB <-> BGR 반전 모드 (주의 : 학습 모델이 반전된 사진을 기반으로 형성되었을 시에 사용)
+INV_COLOR = False
+
 ######################################################################################################
 
 
@@ -134,6 +137,11 @@ class yolov8(Node):
         msg = SegmentGroup()
 
         frame = self.bridge.imgmsg_to_cv2(img_msg) # Frame 수령 및 처리
+
+        # RGB <-> BGR 반전 처리
+        if INV_COLOR == True:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         predicted = self.model.predict(frame, verbose=False) # Frame Segmentation 처리
 
         if self.debug == True: # 디버깅(화면 출력) 여부 결정
