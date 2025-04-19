@@ -77,6 +77,9 @@
 ### ver. 1.0419.1
 - lidar_debugger 예외 처리 강화
 
+### ver. 1.0419.2
+- 2개의 영역에 대한 LIDAR 감지 기능 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

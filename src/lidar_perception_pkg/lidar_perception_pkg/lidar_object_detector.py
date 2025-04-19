@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool
+from interfaces_pkg.msg import BoolMultiArray
 
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSHistoryPolicy
@@ -25,13 +26,21 @@ LOG = True
 # 감지 카운트
 COUNT = 3
 
-# 각도 설정
-START_ANGLE = 0  # 감지 각도 범위의 시작 값
-END_ANGLE = 30   # 감지 각도 범위의 끝 값
+# 각도 설정 (좌)
+START_ANGLE_L = 0  # 감지 각도 범위의 시작 값
+END_ANGLE_L = 30   # 감지 각도 범위의 끝 값
         
-# 범위 설정
-RANGE_MIN = 0.1  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX = 1.0  # 감지 거리 범위의 최대값 [m]
+# 범위 설정 (좌)
+RANGE_MIN_L = 0.8  # 감지 거리 범위의 최소값 [m]
+RANGE_MAX_L = 3.0  # 감지 거리 범위의 최대값 [m]
+
+# 각도 설정 (우)
+START_ANGLE_R = 150  # 감지 각도 범위의 시작 값
+END_ANGLE_R = 180   # 감지 각도 범위의 끝 값
+        
+# 범위 설정 (우)
+RANGE_MIN_R = 0.8  # 감지 거리 범위의 최소값 [m]
+RANGE_MAX_R = 3.0  # 감지 거리 범위의 최대값 [m]
 
 ######################################################################################################
 
@@ -59,11 +68,14 @@ class lidar_object_detector(Node):
 
         # Publisher / Subscriber 선언
         self.subscriber = self.create_subscription(LaserScan, SUB_TOPIC_NAME, self.lidar_callback, self.qos_profile)
-        self.publisher = self.create_publisher(Bool, PUB_TOPIC_NAME, self.qos_profile) 
+        self.publisher = self.create_publisher(BoolMultiArray, PUB_TOPIC_NAME, self.qos_profile) 
 
         # 감지 카운트를 위한 저장소
-        self.detection_reg = []
-        self.state_reg = bool()
+        self.detection_reg_l = []
+        self.state_reg_l = bool()
+
+        self.detection_reg_r = []
+        self.state_reg_r = bool()
 
         # 로깅 여부 설정
         if LOG == False: 
@@ -75,18 +87,21 @@ class lidar_object_detector(Node):
         ranges = msg.ranges
 
         # 감지 여부 추출
-        detected = self.detect_object(ranges=ranges, start_angle=START_ANGLE, end_angle=END_ANGLE, range_min=RANGE_MIN, range_max=RANGE_MAX)
+        detected_l = self.detect_object(ranges=ranges, start_angle=START_ANGLE_L, end_angle=END_ANGLE_L, range_min=RANGE_MIN_L, range_max=RANGE_MAX_L)
+        detected_r = self.detect_object(ranges=ranges, start_angle=START_ANGLE_R, end_angle=END_ANGLE_R, range_min=RANGE_MIN_R, range_max=RANGE_MAX_R)
         
         # 감지 카운트
-        detection_result = self.check_consecutive_detections(detected, COUNT)
+        detection_result_l = self.check_consecutive_detections_l(detected_l, COUNT)
+        detection_result_r = self.check_consecutive_detections_r(detected_r, COUNT)
 
         # 메시지 전송
-        detection_msg = Bool()
-        detection_msg.data = detection_result
+        detection_msg = BoolMultiArray()
+        detection_msg.data.append(detection_result_l)
+        detection_msg.data.append(detection_result_r)
+
         self.publisher.publish(detection_msg)
 
-        self.get_logger().info(f'Detection Result = {detection_result}')
-
+        self.get_logger().info(f'Detection Result = {detection_result_l} {detection_result_r}')
 
     def detect_object(self, ranges, start_angle, end_angle, range_min, range_max):
         # 항상 360 출력
@@ -107,23 +122,41 @@ class lidar_object_detector(Node):
         return False
     
 
-    def check_consecutive_detections(self, detection, cnt):
+    def check_consecutive_detections_l(self, detection, cnt):
         # 레지스터에 감지 데이터 추가
-        self.detection_reg.append(detection)
+        self.detection_reg_l.append(detection)
 
         # 레지스터 저장 개수 제한
-        if len(self.detection_reg) > cnt:
-            self.detection_reg.pop(0)
+        if len(self.detection_reg_l) > cnt:
+            self.detection_reg_l.pop(0)
 
         # T -> F 변환 조건
-        if self.state_reg and self.detection_reg.count(False) >= cnt:
-            self.state_reg = False
+        if self.state_reg_l and self.detection_reg_l.count(False) >= cnt:
+            self.state_reg_l = False
         
         # F -> T 변환 조건
-        elif not self.state_reg and self.detection_reg.count(True) >= cnt:
-            self.state_reg = True
+        elif not self.state_reg_l and self.detection_reg_l.count(True) >= cnt:
+            self.state_reg_l = True
 
-        return self.state_reg
+        return self.state_reg_l
+    
+    def check_consecutive_detections_r(self, detection, cnt):
+        # 레지스터에 감지 데이터 추가
+        self.detection_reg_r.append(detection)
+
+        # 레지스터 저장 개수 제한
+        if len(self.detection_reg_r) > cnt:
+            self.detection_reg_r.pop(0)
+
+        # T -> F 변환 조건
+        if self.state_reg_r and self.detection_reg_r.count(False) >= cnt:
+            self.state_reg_r = False
+        
+        # F -> T 변환 조건
+        elif not self.state_reg_r and self.detection_reg_r.count(True) >= cnt:
+            self.state_reg_r = True
+
+        return self.state_reg_r
 
 
 def main(args=None):

@@ -4,7 +4,7 @@
 
 import rclpy
 from rclpy.node import Node
-from interfaces_pkg.msg import CarData, LaneData, SegmentGroup
+from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray
 from std_msgs.msg import String, Bool, Int8MultiArray
 
 # 시뮬레이션 전용
@@ -63,7 +63,7 @@ class motion_planner(Node):
         self.sub_car = self.create_subscription(CarData, SUB_TOPIC_CAR, self.update_car_data, self.qos_sub)
         self.sub_lane = self.create_subscription(LaneData, SUB_TOPIC_LANE, self.update_lane_data, self.qos_sub)
         self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
-        self.sub_lidar = self.create_subscription(Bool, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
+        self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
 
         # Publisher 선언
