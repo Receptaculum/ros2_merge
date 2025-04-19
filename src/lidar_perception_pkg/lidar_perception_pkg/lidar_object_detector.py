@@ -42,6 +42,9 @@ END_ANGLE_R = 180   # 감지 각도 범위의 끝 값
 RANGE_MIN_R = 0.8  # 감지 거리 범위의 최소값 [m]
 RANGE_MAX_R = 3.0  # 감지 거리 범위의 최대값 [m]
 
+# 영역 내의 점 카운트 상한
+DOT_COUNT = 3
+
 ######################################################################################################
 
 
@@ -110,12 +113,19 @@ class lidar_object_detector(Node):
         # 0 ~ 360 범위로 고정
         if start_angle > end_angle:
             end_angle += total_angle
-        
+
+        # 점 개수를 카운트하기 위한 변수 선언
+        dot_cnt = 0
+
         # 설정 구간 내에 값 존재 여부 확인
         for i in range(start_angle, end_angle + 1):
             i = i % total_angle
-        
+
+            # 카운트 증가 조건
             if range_min <= ranges[i] <= range_max:
+                dot_cnt += 1
+
+            if dot_cnt > DOT_COUNT:
                 return True
         
         # 감지되지 않았을 경우 반환값

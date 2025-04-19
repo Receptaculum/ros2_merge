@@ -80,6 +80,9 @@
 ### ver. 1.0419.2
 - 2개의 영역에 대한 LIDAR 감지 기능 추가
 
+### ver. 1.0419.3
+- LIDAR 영역 내의 점 개수에 따른 동작 설정 기능 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
