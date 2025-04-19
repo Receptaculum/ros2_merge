@@ -85,11 +85,15 @@ class lidar_debugger(Node):
         center_x = int(SIZE[0]/2)
         center_y = int(SIZE[1]/2)
 
+        #for x, y in msg:
+        #    try:
+        #        background[int(y*K + center_y)][int(x*K + center_x)] = 1
+        #    except:
+        #        pass
+
         for x, y in msg:
-            try:
+            if int(y*K + center_y) >= 0 and int(x*K + center_x) >= 0: 
                 background[int(y*K + center_y)][int(x*K + center_x)] = 1
-            except:
-                pass
         
         cv2.circle(background, [center_x, center_y], int(MIN*K), 255, thickness=1)
         cv2.circle(background, [center_x, center_y], int(MAX*K), 255, thickness=1)

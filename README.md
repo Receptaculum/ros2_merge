@@ -74,6 +74,9 @@
 ### ver. 1.0418.1
 - 딥러닝 가속 옵션 추가
 
+### ver. 1.0419.1
+- lidar_debugger 예외 처리 강화
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
