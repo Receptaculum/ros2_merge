@@ -1,9 +1,9 @@
-#################
-# For Mission 1 #
-#################
+##########################
+# For Mission 1 - Legacy #
+##########################
 
-# 신호등 기반 버전
-# best.0421.1959.pt 사용 필수!
+# 횡단보도 기반 버전
+# best.0420.2108.pt 사용 필수!
 
 import rclpy
 from rclpy.node import Node
@@ -38,16 +38,16 @@ BUMPER_POSITION = [320, 462]
 #K_Stanley_2 = 0.4
 #K_Angle_2 = 0.5
 
-K_Stanley_1 = 0.32
-K_Angle_1 = 0.17
+K_Stanley_1 = 0.338
+K_Angle_1 = 0.425
 
-K_Stanley_2 = 0.3
-K_Angle_2 = 0.113
+K_Stanley_2 = 0.385
+K_Angle_2 = 0.3
 
-K_Stanley_1_Turn = K_Stanley_1 * 1
-K_Stanley_2_Turn = K_Stanley_2 * 1
-K_Angle_1_Turn = K_Angle_1 * 1
-K_Angle_2_Turn = K_Angle_2 * 1
+K_Stanley_1_Turn = 0.35
+K_Stanley_2_Turn = 0.3
+K_Angle_1_Turn = 0.45
+K_Angle_2_Turn = 0.3
 
 # 디버그 모드
 DEBUG = False
@@ -100,7 +100,7 @@ class motion_planner(Node):
 
         # 전송 데이터 기억
         self.steer_angle_reg = 0 # send_command 함수에서 사용
-        self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
+        self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
 
         # 카운트 저장소 선언
@@ -131,12 +131,12 @@ class motion_planner(Node):
     def update_yolo_data(self, msg):
         self.yolo_data = msg # segmentation data
 
-        # Traffic Light 감지 여부 기록
-        self.traffic_reg_yolo.append(len(self.yolo_data.traffic_light) > 0)
+        # Croswalk 감지 여부 기록
+        self.crosswalk_reg.append(len(self.yolo_data.crosswalk) > 0)
         
-        # 2개로 Register 크기 제한
-        if len(self.traffic_reg_yolo) > 10:
-            self.traffic_reg_yolo.pop(0)
+        # 4개로 Register 크기 제한
+        if len(self.crosswalk_reg) > 4:
+            self.crosswalk_reg.pop(0)
 
 ######################################################################################################
 
@@ -241,70 +241,56 @@ class motion_planner(Node):
     def drive_mode(self) -> int:
         self.get_logger().info(f"drive_mode : {self.lane_state}")
 
-        ## 신호등이 빨간색인 경우
-        #if self.traffic_data.data == "R":
-        #    # 신호등의 위치가 150 이하 및 빨간색이 3번 연속 검출된 경우
-        #    if np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max() < 150 and self.traffic_reg.count("R") >= 3:
-        #        return 3
-        #    # 그외의 경우
-        #    else:
-        #        pass
+        # 신호등이 빨간색인 경우
+        if self.traffic_data.data == "R":
+            # 신호등의 위치가 150 이하 및 빨간색이 3번 연속 검출된 경우
+            if np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max() < 150 and self.traffic_reg.count("R") >= 3:
+                return 3
+            # 그외의 경우
+            else:
+                pass
 
 
-        # 신호등이 연속 3번 감지되었을 경우
-        #if len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 2:
-        #    # 1차선에 위치하고 신호등의 위치가 185 이상인 경우
-        #    if self.lane_state == 1 and 185 <= np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max():
-        #        return 2
-        #    
-        #    # 2차선에 위치하고 신호등의 위치가 180 이상인 경우
-        #    if self.lane_state == 2 and 180 <= np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max():
-        #        return 2
-        #    
-        #    # 그외의 경우
-        #    else:
-        #        pass
-
-
-        # 1차선에 위치하고 신호등이 4번 감지된 경우
-        if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 4:
-            return 2
-
-        # 2차선에 위치하고 신호등이 2번 감지된 경우
-        elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 3:
-            return 2
+        # 횡단보도가 연속 3번 감지되었을 경우
+        if len(self.yolo_data.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 3:
+            # 횡단보도의 위치가 320 이상인 경우
+            if 320 < np.array(self.yolo_data.crosswalk).reshape(-1, 2)[:, 1].max():
+                return 2
+            # 그외의 경우
+            else:
+                pass
 
         # 1차선에 있을 경우, 속도 및 조향 설정
         if self.lane_state == 1:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 170,
                                                         path_slope = self.lane_data.slope1,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현 (180)
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+               self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
 
         # 2차선에 있을 경우, 속도 및 조향 설정
         elif self.lane_state == 2:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 170,
                                                         path_slope = self.lane_data.slope2, 
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
             # Differential 구현 (200)
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+               self.send_command(steer_angle = steer_angle, left_speed = 170, right_speed = 170) 
 
         # 계속 주행
         return 1
@@ -318,16 +304,16 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 2 -> 1")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 150,
                                                         path_slope=self.lane_data.slope1,
                                                         k_angle=K_Angle_1_Turn,
                                                         k_stanley=K_Stanley_1_Turn)
             
             # 조향 각도 제한 [좌:-20, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -20, 40) * 1.2), left_speed = 120, right_speed = 120) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -25, 40)), left_speed = 150, right_speed = 150) 
             
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
+            # Driving Mode로의 변동 조건 (Count 40 이상)
+            if self.cnt > 50:
                 self.lane_state = 1
                 self.cnt = 0
                 return 1
@@ -338,16 +324,16 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 1 -> 2")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 150,
                                                         path_slope=self.lane_data.slope2,
                                                         k_angle=K_Angle_2_Turn,
                                                         k_stanley=K_Stanley_2_Turn)
 
             # 조향 각도 제한 [좌:-40, 우:20]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 20)), left_speed = 120, right_speed = 120) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 18)), left_speed = 150, right_speed = 150) 
             
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
+            # Driving Mode로의 변동 조건 (Count 40 이상)
+            if self.cnt > 50:
                 self.lane_state = 2
                 self.cnt = 0
                 return 1
