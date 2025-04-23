@@ -39,7 +39,7 @@ BUMPER_POSITION = [320, 462]
 #K_Angle_2 = 0.5
 
 K_Stanley_1 = 0.32
-K_Angle_1 = 0.17 - 0.02
+K_Angle_1 = 0.17 - 0.03
 
 K_Stanley_2 = 0.3
 K_Angle_2 = 0.113 - 0.01
@@ -265,8 +265,8 @@ class motion_planner(Node):
         #    else:
         #        pass
 
-        # 1차선에 위치하고 신호등이 4번 감지된 경우
-        if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 4:
+        # 1차선에 위치하고 신호등이 5번 감지된 경우
+        if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
             return 2
 
         # 2차선에 위치하고 신호등이 2번 감지된 경우
