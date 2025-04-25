@@ -3,3 +3,4 @@ int16[] lane_2
 int16[] traffic_light
 int16[] car
 int16[] crosswalk
+int16[] line

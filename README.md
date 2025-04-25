@@ -93,6 +93,9 @@
 - motion_planner 구조 개선
 - depth_extractor 내부 변수 변경
 
+### ver. 1.0425.2
+- 후방 카메라를 위한 image_publisher 및 yolov8 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

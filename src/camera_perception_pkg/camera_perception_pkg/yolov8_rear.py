@@ -1,5 +1,5 @@
 #################
-# 전방 카메라 전용 #
+# 후방 카메라 전용 #
 #################
 
 import rclpy
@@ -21,16 +21,16 @@ import logging
 ## <Parameter> #######################################################################################
 
 # 노드 이름
-NODE_NAME = "yolov8"
+NODE_NAME = "yolov8_rear"
 
 # 발행 토픽 이름
-TOPIC_NAME = "segmented_data"
+TOPIC_NAME = "segmented_data_rear"
 
-# 라벨 이름 (lane_1, lane_2, traffic_light, car, crosswalk)
-LABEL_NAME = ["lane1", "lane2", "traffic_light", "car", "cross_walk"]
+# 라벨 이름 (car, line)
+LABEL_NAME = ["car", "line"]
 
 # 구독 토픽 이름
-SUB_TOPIC_NAME = "image_publisher"
+SUB_TOPIC_NAME = "image_publisher_rear"
 
 # PT 파일 이름 지정 (확장자 포함, 해당 실행 파일의 디렉터리는 이미 앞에 포함되어 있다는 점에 유념)
 PT_NAME = "lib/pt/best.0323.2258.pt"
@@ -111,9 +111,6 @@ class yolov8(Node):
         # 라벨 이름 변수 선언
         self.label_0 = label_name[0]
         self.label_1 = label_name[1]
-        self.label_2 = label_name[2]
-        self.label_3 = label_name[3]
-        self.label_4 = label_name[4]        
 
         # 디버그 변수 선언
         self.debug = debug
@@ -151,9 +148,6 @@ class yolov8(Node):
         # 카운트를 위한 변수 선언
         cnt_0 = 0
         cnt_1 = 0
-        cnt_2 = 0
-        cnt_3 = 0 
-        cnt_4 = 0
 
         # 확률에 대한 내림차순 정렬 (이미 Ultralytics의 전처리 과정에 해당 작업이 포함되어 있기에 제외함, Deprecated)
         # predict_box = self.predicted[0].boxes[torch.argsort(self.predicted[0].boxes.conf, descending=True)]
@@ -170,24 +164,12 @@ class yolov8(Node):
             name = predicted[0].names[int(predict_val.cls.item())].strip()
 
             if  name == self.label_0.strip() and cnt_0 == 0:
-                msg.lane_1 = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()
-                cnt_0 += 1
+                msg.car.extend(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
+                cnt_0 += 1   
             
             elif name == self.label_1.strip() and cnt_1 == 0:
-                msg.lane_2 = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()    
-                cnt_1 += 1
-
-            elif name == self.label_2.strip() and cnt_2 == 0:
-                msg.traffic_light = predict_box[n].xyxy[0].to(torch.int16).flatten().tolist()
-                cnt_2 += 1          
-
-            elif name == self.label_3.strip() and cnt_3 <= 1: # Count 개수 변경
-                msg.car.extend(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
-                cnt_3 += 1    
-
-            elif name == self.label_4.strip() and cnt_4 == 0:
-                msg.crosswalk = predict_box[n].xyxy[0].to(torch.int16).flatten().tolist()
-                cnt_4 += 1   
+                msg.line = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()    
+                cnt_1 += 1         
 
                 # Polygon 형식
                 # self.msg_2.data = self.predicted[0].masks[n].xy[0].flatten().tolist() 
