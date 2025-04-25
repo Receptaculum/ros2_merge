@@ -4,7 +4,8 @@
 
 import rclpy
 from rclpy.node import Node
-from interfaces_pkg.msg import CarData, LaneData, SegmentGroup
+from sensor_msgs.msg import Image
+from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray
 from std_msgs.msg import String, Bool, Int8MultiArray
 
 # 시뮬레이션 전용
@@ -22,6 +23,7 @@ SUB_TOPIC_LANE = "lane_data"
 SUB_TOPIC_TRAFFIC = "traffic_data"
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
+SUB_TOPIC_DEPTH = "depth_data"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -63,8 +65,9 @@ class motion_planner(Node):
         self.sub_car = self.create_subscription(CarData, SUB_TOPIC_CAR, self.update_car_data, self.qos_sub)
         self.sub_lane = self.create_subscription(LaneData, SUB_TOPIC_LANE, self.update_lane_data, self.qos_sub)
         self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
-        self.sub_lidar = self.create_subscription(Bool, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
+        self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
+        self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(Int8MultiArray, PUB_TOPIC_NAME, self.qos_pub)
@@ -75,6 +78,7 @@ class motion_planner(Node):
         self.traffic_data = None
         self.lidar_data = None
         self.yolo_data = None
+        self.depth_data = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -83,28 +87,27 @@ class motion_planner(Node):
         self.lane_state = None
 
         # Timer 선언
-        self.timer = self.create_timer(PERIOD, self.motion_decision_callback) 
+        self.timer = self.create_timer(PERIOD, self.motion_decision_callback)
 
         # 전송 데이터 기억
         self.steer_angle_reg = 0 # send_command 함수에서 사용
-        self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
+        self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
 
         # 카운트 저장소 선언
         self.cnt = 0
 
-
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
-    
+
     def update_car_data(self, msg):
         self.car_data = msg # car position
 
     def update_lane_data(self, msg):
         self.lane_data = msg # angle, center position
-   
+
     def update_traffic_data(self, msg):
         self.traffic_data = msg # R, Y, G, N
-   
+
         # Traffic Light 데이터 기록
         self.traffic_reg.append(self.traffic_data.data)
         
@@ -118,12 +121,15 @@ class motion_planner(Node):
     def update_yolo_data(self, msg):
         self.yolo_data = msg # segmentation data
 
-        # Croswalk 감지 여부 기록
-        self.crosswalk_reg.append(len(self.yolo_data.crosswalk) > 0)
+        # Traffic Light 감지 여부 기록
+        self.traffic_reg_yolo.append(len(self.yolo_data.traffic_light) > 0)
         
-        # 4개로 Register 크기 제한
-        if len(self.crosswalk_reg) > 4:
-            self.crosswalk_reg.pop(0)
+        # 10개로 Register 크기 제한
+        if len(self.traffic_reg_yolo) > 10:
+            self.traffic_reg_yolo.pop(0)
+
+    def update_depth_data(self, msg):
+        self.depth_data = msg # Depth Image
 
 ######################################################################################################
 
@@ -210,8 +216,10 @@ class motion_planner(Node):
 
     # State 0
     def init_mode(self) -> int:      
-        # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외)
-        
+        # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
+
+        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
+        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
         if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
 
@@ -237,7 +245,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}")
+            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.depth_data != None}")
             return 0
 
 ########################################################################################

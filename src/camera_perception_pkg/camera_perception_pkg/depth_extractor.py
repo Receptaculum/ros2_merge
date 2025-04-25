@@ -37,7 +37,7 @@ DEBUG = True
 
 class DepthExtractor(Node):
     def __init__(self):
-        super().__init__('car_info_extractor')
+        super().__init__('depth_extractor')
 
         # QoS settings
         self.qos_profile = QoSProfile(
@@ -76,11 +76,11 @@ class DepthExtractor(Node):
         # 모델에 파라미터 대입
         self.model.load_state_dict(param)
         
-        # 모델 컴파일
-        self.model = torch.compile(self.model, fullgraph=False, mode="reduce-overhead", backend="eager")
-
         # 추론 모드 설정
         self.model.eval()
+
+        # 모델 컴파일
+        self.model = torch.compile(self.model, fullgraph=False, mode="reduce-overhead", backend="eager")
 
         # 이미지 변환 Object 선언
         self.transform = torchvision.transforms.Compose(
@@ -122,6 +122,7 @@ class DepthExtractor(Node):
             cv2.imshow("MIDAS", frame)
             cv2.waitKey(5)
 
+        # 데이터 전송
         self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
 
 

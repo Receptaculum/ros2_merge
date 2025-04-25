@@ -89,6 +89,10 @@
 ### ver. 1.0423.1
 - Mission 1에 대한 Fine Tuning 작업 수행
 
+### ver. 1.0425.1
+- motion_planner 구조 개선
+- depth_extractor 내부 변수 변경
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
