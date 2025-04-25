@@ -4,7 +4,6 @@
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
 from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray
 from std_msgs.msg import String, Bool, Int8MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
@@ -19,7 +18,6 @@ SUB_TOPIC_LANE = "lane_data"
 SUB_TOPIC_TRAFFIC = "traffic_data"
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
-SUB_TOPIC_DEPTH = "depth_data"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -71,7 +69,6 @@ class motion_planner(Node):
         self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
-        self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(Int8MultiArray, PUB_TOPIC_NAME, self.qos_pub)
@@ -82,7 +79,6 @@ class motion_planner(Node):
         self.traffic_data = None
         self.lidar_data = None
         self.yolo_data = None
-        self.depth_data = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -132,10 +128,8 @@ class motion_planner(Node):
         if len(self.traffic_reg_yolo) > 10:
             self.traffic_reg_yolo.pop(0)
 
-    def update_depth_data(self, msg):
-        self.depth_data = msg # Depth Image
-
 ######################################################################################################
+
 
     # 제어 명령 전송 함수 (-128 ~ 127)
     def send_command(self, steer_angle:int, left_speed:int, right_speed:int):
@@ -155,7 +149,7 @@ class motion_planner(Node):
                     int(np.clip(int(right_speed), -128, 127))]
 
         if DEBUG == True:
-            msg = Int8MultiArray()     
+            msg = Int8MultiArray()
 
         self.command_publisher.publish(msg)
 
@@ -230,7 +224,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.depth_data != None}")
+            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}")
 
             return 0
 
@@ -239,7 +233,6 @@ class motion_planner(Node):
     # State 1
     def drive_mode(self) -> int:
         self.get_logger().info(f"drive_mode : {self.lane_state}")
-
 
         # 1차선에 위치하고 신호등이 5번 감지된 경우
         if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
