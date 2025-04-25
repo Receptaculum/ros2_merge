@@ -7,7 +7,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray
 from std_msgs.msg import String, Bool, Int8MultiArray
-
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import numpy as np
@@ -43,7 +42,7 @@ K_Angle_2 = 0.44
 BASE_LINE = 320
 
 # 디버그 모드
-DEBUG = True
+DEBUG = False
 
 ######################################################################################################
 
@@ -302,8 +301,8 @@ class motion_planner(Node):
 
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
+        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
+        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
 
             # 차량 위치 결정
             d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
