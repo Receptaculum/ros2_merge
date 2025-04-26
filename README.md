@@ -96,6 +96,9 @@
 ### ver. 1.0425.2
 - 후방 카메라를 위한 image_publisher 및 yolov8 추가
 
+### ver. 1.0426.1
+- 주차 관련 노드 추가
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

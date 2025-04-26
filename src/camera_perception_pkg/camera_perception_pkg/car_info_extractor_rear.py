@@ -1,5 +1,5 @@
 ###########
-# 전방 전용 #
+# 후방 전용 #
 ###########
 
 import cv2
@@ -18,10 +18,10 @@ import logging
 ## <Parameter> #######################################################################################
 
 # 구독 토픽 이름
-SUB_TOPIC_NAME = "segmented_data"
+SUB_TOPIC_NAME = "segmented_data_rear"
 
 # 배포 토픽 이름
-PUB_TOPIC_NAME = "car_data"
+PUB_TOPIC_NAME = "car_data_rear"
 
 # 로깅 여부
 LOG = True
@@ -31,7 +31,7 @@ LOG = True
 
 class CarDetector(Node):
     def __init__(self):
-        super().__init__('car_info_extractor')
+        super().__init__('car_info_extractor_rear')
 
         self.sub_topic = self.declare_parameter('sub_detection_topic', SUB_TOPIC_NAME).value
         self.pub_topic = self.declare_parameter('pub_topic', PUB_TOPIC_NAME).value
