@@ -45,7 +45,7 @@ LOG = True
 DEVICE = "cpu"
 
 # Thread 수 (CPU 전용, 본인의 CPU Core 수보다 약간 적게 설정)
-THREAD = 8
+THREAD = 4
 
 # RGB <-> BGR 반전 모드 (주의 : 학습 모델이 반전된 사진을 기반으로 형성되었을 시에 사용)
 INV_COLOR = False
@@ -76,7 +76,7 @@ class yolov8(Node):
         super().__init__(node_name)
 
         # 속도 최적화를 위한 설정
-        # torch.set_flush_denormal(True)
+        torch.set_flush_denormal(True)
 
         # YOLO Model 선언
         self.model = YOLO(os.path.dirname(__file__) + "/" + pt_name) 
