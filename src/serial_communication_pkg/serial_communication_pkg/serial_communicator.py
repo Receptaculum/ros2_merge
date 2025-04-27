@@ -1,11 +1,13 @@
 import rclpy
 from rclpy.node import Node
+from interfaces_pkg.msg import MotionCommand
 from std_msgs.msg import Int8MultiArray, UInt16
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import serial
 import logging
 
+import numpy as np
 
 ## <Parameter> #####################################################################################
 
@@ -73,10 +75,10 @@ class serial_communicator(Node):
                 )
         
         # 지령값 구독
-        self.subscriber = self.create_subscription(Int8MultiArray, sub_topic_name, self.send_callback, self.qos_sub)
+        self.subscriber = self.create_subscription(MotionCommand, sub_topic_name, self.send_callback, self.qos_sub)
 
         # 아두이노 전송값 확인
-        self.timer = self.create_timer(TIMER, self.receive_callback)
+        # self.timer = self.create_timer(TIMER, self.receive_callback)
 
         # 아두이노 전송값 배포
         self.publisher = self.create_publisher(UInt16, pub_topic_name, self.qos_pub)
@@ -87,10 +89,11 @@ class serial_communicator(Node):
 
 
     def send_callback(self, msg):
-        steer_angle = msg.data[0]
-        left_motor_speed = msg.data[1]
-        right_motor_speed = msg.data[2]
-        
+        # 값 크기 제한 및 Mapping
+        steer_angle = int(np.clip(msg.steering, -128, 127)) 
+        left_motor_speed = int(np.interp(msg.left_speed, [-255, 255], [-128, 127]))
+        right_motor_speed = int(np.interp(msg.right_speed, [-255, 255], [-128, 127]))
+
         # 조향 s (0~255) 1 byte | 속도 v (0~255) 2 byte
         # bbbbbbbb(조향) bbbbbbbb(속도_좌) bbbbbbbb(속도_우)
         # 양수 -> 그대로 | 음수 -> 2의 보수 변환

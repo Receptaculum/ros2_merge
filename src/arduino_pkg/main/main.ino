@@ -56,7 +56,7 @@ void setup() {
 void loop() {
     read_command_data();
 
-    if(millis() - control_period >= control_period) {
+    if(millis() - time_mem >= control_period) {
  
         steer = constrain(steer, REAL_ANGLE_LEFT, REAL_ANGLE_RIGHT);
         left_speed = constrain(map(left_speed, -128, 127, -255, 255), -255, 255);

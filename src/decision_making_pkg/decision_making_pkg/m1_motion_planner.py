@@ -4,7 +4,7 @@
 
 import rclpy
 from rclpy.node import Node
-from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray
+from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray, MotionCommand
 from std_msgs.msg import String, Bool, Int8MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
@@ -71,7 +71,7 @@ class motion_planner(Node):
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
 
         # Publisher 선언
-        self.command_publisher = self.create_publisher(Int8MultiArray, PUB_TOPIC_NAME, self.qos_pub)
+        self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
 
         # 데이터 저장 레지스터 선언
         self.car_data = None
@@ -130,10 +130,9 @@ class motion_planner(Node):
 
 ######################################################################################################
 
-
-    # 제어 명령 전송 함수 (-128 ~ 127)
+    # 제어 명령 전송 함수
     def send_command(self, steer_angle:int, left_speed:int, right_speed:int):
-        msg = Int8MultiArray()
+        msg = MotionCommand()
 
         # 조향각 데이터가 비어있는 경우
         if steer_angle == None:
@@ -144,12 +143,12 @@ class motion_planner(Node):
             # 조향각 업데이트
             self.steer_angle_reg = steer_angle
 
-        msg.data = [int(np.clip(int(steer_angle), -128, 127)),
-                    int(np.clip(int(left_speed), -128, 127)),
-                    int(np.clip(int(right_speed), -128, 127))]
+        msg.steering = steer_angle
+        msg.left_speed = left_speed
+        msg.right_speed = right_speed
 
         if DEBUG == True:
-            msg = Int8MultiArray()
+            msg = MotionCommand()
 
         self.command_publisher.publish(msg)
 

@@ -99,6 +99,9 @@
 ### ver. 1.0426.1
 - 주차 관련 노드 추가
 
+### ver. 1.0427.1
+- 기존 serial_communicator 간 호환성 확보
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
