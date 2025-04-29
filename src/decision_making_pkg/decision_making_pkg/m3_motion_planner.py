@@ -1,28 +1,31 @@
-#############
-# Prototype #
-#############
+########################
+# For Mission 3 (Real) #
+########################
 
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray, MotionCommand
-from std_msgs.msg import String, Bool, Int8MultiArray
+from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, MotionCommand, BoolMultiArray
+from std_msgs.msg import String, Bool, Int8MultiArray, Float32MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import numpy as np
+import cv_bridge
+import time
 
 ## <Parameter> #####################################################################################
 
 # 구독 토픽 이름
 SUB_TOPIC_CAR = "car_data" 
-SUB_TOPIC_LANE = "lane_data"
-SUB_TOPIC_TRAFFIC = "traffic_data"
+SUB_TOPIC_CAR_REAR = "car_data_rear" 
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
+SUB_TOPIC_YOLO_REAR = "segmented_data_rear"
+SUB_TOPIC_LINE = "line_data_rear"
 SUB_TOPIC_DEPTH = "depth_data"
 
 # 발행 토픽 이름
-PUB_TOPIC_NAME = "command_data"
+PUB_TOPIC_NAME = "topic_control_signal"
 
 # 연산 주기 설정
 PERIOD = 0.1
@@ -31,16 +34,14 @@ PERIOD = 0.1
 BUMPER_POSITION = [320, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.32
-K_Angle_1 = 0.17 - 0.03
+K_Stanley_1 = 0.38
+K_Angle_1 = 0.44
 
-K_Stanley_2 = 0.3
-K_Angle_2 = 0.113 - 0.01
+K_Stanley_2 = 0.38
+K_Angle_2 = 0.44
 
-K_Stanley_1_Turn = K_Stanley_1 * 1.3
-K_Stanley_2_Turn = K_Stanley_2 * 1
-K_Angle_1_Turn = K_Angle_1 * 1
-K_Angle_2_Turn = K_Angle_2 * 1
+# 기준선
+BASE_LINE = 320
 
 # 디버그 모드
 DEBUG = False
@@ -67,77 +68,76 @@ class motion_planner(Node):
         
         # Subsciption 선언
         self.sub_car = self.create_subscription(CarData, SUB_TOPIC_CAR, self.update_car_data, self.qos_sub)
-        self.sub_lane = self.create_subscription(LaneData, SUB_TOPIC_LANE, self.update_lane_data, self.qos_sub)
-        self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
+        self.sub_car_rear = self.create_subscription(CarData, SUB_TOPIC_CAR_REAR, self.update_car_rear_data, self.qos_sub)
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
+        self.sub_yolo_rear = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_REAR, self.update_yolo_rear_data, self.qos_sub)
+        self.sub_line = self.create_subscription(Float32MultiArray, SUB_TOPIC_LINE, self.update_line_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
 
+        # CV Bridge Object 선언    
+        self.bridge = cv_bridge.CvBridge()
+
         # 데이터 저장 레지스터 선언
         self.car_data = None
-        self.lane_data = None
-        self.traffic_data = None
+        self.car_rear_data = None
         self.lidar_data = None
         self.yolo_data = None
+        self.yolo_rear_data = None
+        self.line_data = None
         self.depth_data = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
-
-        # Lane 위치 저장 레지스터 선언 (1, 2)
-        self.lane_state = None
 
         # Timer 선언
         self.timer = self.create_timer(PERIOD, self.motion_decision_callback)
 
         # 전송 데이터 기억
         self.steer_angle_reg = 0 # send_command 함수에서 사용
-        self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
-        self.traffic_reg = [] # update_traffic_data 함수에서 사용
-
-        # 카운트 저장소 선언
-        self.cnt = 0
 
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
 
     def update_car_data(self, msg):
-        self.car_data = msg # car position
+        self.car_data = msg # car position        
 
-    def update_lane_data(self, msg):
-        self.lane_data = msg # angle, center position
+#######################################################################
 
-    def update_traffic_data(self, msg):
-        self.traffic_data = msg # R, Y, G, N
+    def update_car_rear_data(self, msg):
+        self.car_rear_data = msg # car position        
 
-        # Traffic Light 데이터 기록
-        self.traffic_reg.append(self.traffic_data.data)
-        
-        # 4개로 Register 크기 제한
-        if len(self.traffic_reg) > 4:
-            self.traffic_reg.pop(0)
+#######################################################################
 
     def update_lidar_data(self, msg):
         self.lidar_data = msg # T/F
 
+#######################################################################
+
     def update_yolo_data(self, msg):
         self.yolo_data = msg # segmentation data
 
-        # Traffic Light 감지 여부 기록
-        self.traffic_reg_yolo.append(len(self.yolo_data.traffic_light) > 0)
-        
-        # 10개로 Register 크기 제한
-        if len(self.traffic_reg_yolo) > 10:
-            self.traffic_reg_yolo.pop(0)
+#######################################################################
+
+    def update_yolo_rear_data(self, msg):
+        self.yolo_rear_data = msg # segmentation data
+
+#######################################################################
+
+    def update_line_data(self, msg):
+        self.line_data = msg # line data
+
+#######################################################################
 
     def update_depth_data(self, msg):
         self.depth_data = msg # Depth Image
 
 ######################################################################################################
 
-    # 제어 명령 전송 함수
+
+    # 제어 명령 전송 함수 (-128 ~ 127)
     def send_command(self, steer_angle:int, left_speed:int, right_speed:int):
         msg = MotionCommand()
 
@@ -180,17 +180,29 @@ class motion_planner(Node):
             if self.state == 0:
                 self.state = self.init_mode()
 
-            # State 1 : drive_mode
+            # State 1 : search_mode
             elif self.state == 1:
-                self.state = self.drive_mode()
+                self.state = self.search_mode()
 
-            # State 2 : lane_change_mode
+            # State 2 : turn_mode
             elif self.state == 2:
-                self.state = self.lane_change_mode()
+                self.state = self.turn_mode()
 
-            # State 3 : stop_mode
+            # State 3 : stop_mode_1
             elif self.state == 3:
-                self.state = self.stop_mode()
+                self.state = self.stop_mode_1()
+
+            # State 4 : back_up_mode
+            elif self.state == 4:
+                self.state = self.back_up_mode()
+
+            # State 5 : stop_mode_2
+            elif self.state == 5:
+                self.state = self.stop_mode_2()
+
+            # State 6 : forward_mode
+            elif self.state == 6:
+                self.state = self.forward_mode()
 
         except Exception as e:
             self.get_logger().warn(f"{e}")
@@ -201,24 +213,11 @@ class motion_planner(Node):
 
     # State 0
     def init_mode(self) -> int:      
-        # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
+        # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외)
 
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
-
-            # 차량 위치 결정
-            d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
-            d_2 = abs(self.lane_data.lane2_x - BUMPER_POSITION[0])
-
-            # 2차선 위치 조건
-            if(d_1 > d_2):
-                self.lane_state = 2
-        
-            # 1차선 위치 조건
-            else:
-                self.lane_state = 1
+        if self.car_data != None and self.car_rear_data != None and self.lidar_data != None and self.yolo_data != None and self.yolo_rear_data != None and self.line_data != None:
 
             # 0의 지령값 설정
             self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
@@ -230,123 +229,135 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.depth_data != None}")
-
+            self.get_logger().warn(f"{self.car_data != None}, {self.car_rear_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.yolo_rear_data != None}, {self.line_data != None}")
             return 0
 
 ########################################################################################
 
     # State 1
-    def drive_mode(self) -> int:
-        self.get_logger().info(f"drive_mode : {self.lane_state}")
+    def search_mode(self) -> int:
+        self.get_logger().info(f"search_mode")   
 
-
-        # 1차선에 위치하고 신호등이 5번 감지된 경우
-        if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
+        # 정속 주행
+        self.send_command(steer_angle = 0, left_speed = 100, right_speed = 100)
+        
+        # 우측 LIDAR에 사물이 감지된 경우
+        if self.lidar_data.data[1] == True:
+            #
             return 2
 
-        # 2차선에 위치하고 신호등이 2번 감지된 경우
-        elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 2:
-            return 2
 
-        # 1차선에 있을 경우, 속도 및 조향 설정
-        if self.lane_state == 1:
-            steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
-                                                        car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
-                                                        path_slope = self.lane_data.slope1,
-                                                        k_angle=K_Angle_1,
-                                                        k_stanley=K_Stanley_1)
-            # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-            else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-
-        # 2차선에 있을 경우, 속도 및 조향 설정
-        elif self.lane_state == 2:
-            steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
-                                                        car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
-                                                        path_slope = self.lane_data.slope2, 
-                                                        k_angle=K_Angle_2,
-                                                        k_stanley=K_Stanley_2)
-            # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-            else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
-
-        # 계속 주행
+        # 현 상태 유지
         return 1
 
 ########################################################################################
 
     # State 2
-    def lane_change_mode(self) -> int:
-        # 2차선에 위치해 있을 경우
-        if self.lane_state == 2:
-            self.get_logger().info(f"lane_change_mode : 2 -> 1")
-            steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
-                                                        car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
-                                                        path_slope=self.lane_data.slope1,
-                                                        k_angle=K_Angle_1_Turn,
-                                                        k_stanley=K_Stanley_1_Turn)
-            
-            # 조향 각도 제한 [좌:-20, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -20, 40)), left_speed = 120, right_speed = 120) 
-            
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
-                self.lane_state = 1
-                self.cnt = 0
-                return 1
-            
+    def turn_mode(self) -> int:
+        self.get_logger().info(f"turn_mode")   
 
-        # 1차선에 위치해 있을 경우
-        if self.lane_state == 1:
-            self.get_logger().info(f"lane_change_mode : 1 -> 2")
-            steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
-                                                        car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
-                                                        path_slope=self.lane_data.slope2,
-                                                        k_angle=K_Angle_2_Turn,
-                                                        k_stanley=K_Stanley_2_Turn)
+        # 좌측 조향 운전
+        self.send_command(steer_angle = -30, left_speed = 100, right_speed = 100)
 
-            # 조향 각도 제한 [좌:-40, 우:20]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 20)), left_speed = 120, right_speed = 120) 
-            
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
-                self.lane_state = 2
-                self.cnt = 0
-                return 1
-
-        # 카운트 증가
-        self.cnt += 1
-
-        # 기존 상태 유지
+        # 2개의 차량이 시야에 감지된 경우
+        if len(self.car_rear_data.x) == 2:
+            return 3
+        
+        # 현 상태 유지
         return 2
     
 ########################################################################################
 
     # State 3
-    def stop_mode(self) -> int:
-        self.get_logger().info(f"stop_mode : {self.lane_state}")
+    def stop_mode_1(self) -> int:
+        self.get_logger().info(f"stop_mode_1")   
+
+        # 정지
+        self.send_command(steer_angle = -40, left_speed = 0, right_speed = 0)
+
+        # 1초 지연
+        time.sleep(1)
+
+        # 후진 단계로 이동
+        return 4
+
+########################################################################################
+
+    # State 4
+    def back_up_mode(self) -> int:
+        self.get_logger().info(f"back_up_mode")
+        car_center_point = [640/2, 480]   
+
+        # 2개의 차량이 감지된 경우
+        if len(self.car_rear_data.x) == 2:
+            target_point = [sum(self.car_rear_data.x)/2, sum(self.car_rear_data.y)/2]
+
+        # 1개의 차량이 감지된 경우
+        elif len(self.car_rear_data.x) == 1:
+            # 후방 좌측 차량만 감지될 경우
+            if self.car_rear_data.x[0] < 640/2:
+                target_point = [(self.car_rear_data.x[0] + 640)/2, None]
+
+            # 후방 우측 차량만 감지될 경우
+            elif self.car_rear_data.x[0] > 640/2:
+                target_point = [(self.car_rear_data.x[0] + 0)/2, None]
+
+        # 차량이 감지되지 않은 경우
+        else:
+            target_point = [640/2, None]
+
+        # 조향각 계산
+        angle = self.calculate_steering_angle(target_point, car_center_point, 0, 120, 0, 2)
+
+        # 후진 진행
+        self.send_command(steer_angle = angle, left_speed = -120, right_speed = -120)
+
+        # LIDAR 양쪽에 장애물 감지시 정지
+        if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
+            return 5
+
+        # 현 상태 유지
+        return 4
+
+########################################################################################
+
+    # State 5
+    def stop_mode_2(self) -> int:
+        self.get_logger().info(f"stop_mode_2")   
+
+        # 정지
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
-        # 신호등이 빨간색이 아닐 경우
-        if self.traffic_data.data != "R":
-            return 1
-        
-        # 신호등이 빨간색일 경우
-        else:
-            return 3
+        # 1초 지연
+        time.sleep(2)
+
+        # 마무리 단계로 이동
+        return 6
+
+########################################################################################
+
+    # State 6
+    def forward_mode(self) -> int:
+        self.get_logger().info(f"forward_mode")   
+
+        # 직진
+        self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
+
+        # 5초 지연
+        time.sleep(2)
+
+        # 우회전
+        self.send_command(steer_angle = 40, left_speed = 200, right_speed = 200)
+
+        # 5초 지연
+        time.sleep(5.5)
+
+        # 직진
+        self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
+
+        # Trapping
+        while True:
+            continue
 
 ########################################################################################
 

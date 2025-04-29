@@ -108,6 +108,9 @@
 ### ver. 1.0429.2
 - mission별 LIDAR 설정 분기
 
+### ver. 1.0429.3
+- 시뮬레이션 상의 motion_planner 이식 작업 완료
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화

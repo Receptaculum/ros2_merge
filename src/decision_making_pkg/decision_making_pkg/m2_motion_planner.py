@@ -32,11 +32,11 @@ PERIOD = 0.1
 BUMPER_POSITION = [320, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.38
-K_Angle_1 = 0.44
+K_Stanley_1 = 0.32
+K_Angle_1 = 0.17
 
-K_Stanley_2 = 0.38
-K_Angle_2 = 0.44
+K_Stanley_2 = 0.30
+K_Angle_2 = 0.113
 
 # 기준선
 BASE_LINE = 320
@@ -117,7 +117,6 @@ class motion_planner(Node):
         # 깊이 추정
         if self.depth_data != None and len(self.car_data.x) > 0:
             frame = self.bridge.imgmsg_to_cv2(self.depth_data)
-            # bumper = frame[-1][BUMPER_POSITION[0]]
 
             for x, y in list(zip(self.car_data.x, self.car_data.y)):
                 # 프레임 정규화
@@ -126,13 +125,12 @@ class motion_planner(Node):
                 # 레지스터에 추가
                 self.car_depth.append(frame_norm[int(y)][int(x)])
 
-        else:
-            pass
-
-        # self.get_logger().info(f"depth : {self.car_depth}")
+#######################################################################
 
     def update_lane_data(self, msg):
         self.lane_data = msg # angle, center position
+
+#######################################################################
 
     def update_traffic_data(self, msg):
         self.traffic_data = msg # R, Y, G, N
@@ -144,8 +142,12 @@ class motion_planner(Node):
         if len(self.traffic_reg) > 4:
             self.traffic_reg.pop(0)
 
+#######################################################################
+
     def update_lidar_data(self, msg):
         self.lidar_data = msg # T/F
+
+#######################################################################
 
     def update_yolo_data(self, msg):
         self.yolo_data = msg # segmentation data
@@ -157,10 +159,13 @@ class motion_planner(Node):
         if len(self.traffic_reg_yolo) > 4:
             self.traffic_reg_yolo.pop(0)
 
+#######################################################################
+
     def update_depth_data(self, msg):
         self.depth_data = msg # Depth Image
 
 ######################################################################################################
+
 
     # 제어 명령 전송 함수
     def send_command(self, steer_angle:int, left_speed:int, right_speed:int):
@@ -178,10 +183,10 @@ class motion_planner(Node):
         msg.steering = steer_angle
         msg.left_speed = left_speed
         msg.right_speed = right_speed
-        
+
         if DEBUG == True:
             msg = MotionCommand()
-       
+
         self.command_publisher.publish(msg)
 
 
@@ -264,7 +269,7 @@ class motion_planner(Node):
                     car_1 = True
                     car_location_data.append(1)
 
-            # self.get_logger().info(f"detect: {car_1} {car_2}")
+            #self.get_logger().info(f"detect: {car_1} {car_2}")
 
             return car_1, car_2, car_location_data
 
@@ -299,9 +304,9 @@ class motion_planner(Node):
     def init_mode(self) -> int:      
         # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
 
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
+        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
+        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
 
             # 차량 위치 결정
@@ -333,54 +338,68 @@ class motion_planner(Node):
 
     # State 1
     def drive_mode(self) -> int:
-        self.get_logger().info(f"drive_mode : {self.lane_state}")                      
+        self.get_logger().info(f"drive_mode : {self.lane_state}")                               
 
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
-            # 2차선에 차량이 없는 경우
-            if self.car_2 == False:
-                # 1차선 차량 위치가 240 이상인 경우 (차량이 근접한 경우)
-                if self.car_data.y[self.car_location_data.index(1)] > 200:
+            # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
+            if self.car_2 == False and self.lidar_data.data[1] == False:
+                    self.get_logger().info("debug 1-1")
+
                     # 차선 변경
                     return 2                 
 
             # 2차선에 차량이 있는 경우
             elif self.car_2 == True:
+                # 1차선 차량의 면적이 2차선 차량보다 더 큰 경우
+                if self.car_depth[self.car_location_data.index(1)] > self.car_depth[self.car_location_data.index(2)]:
 
-                # Depth 정보 사용이 가능한 경우
-                if self.car_depth != []:
-                    pass
-
-                # 진행 및 추월이 불가능한 경우
-                if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
-                    # 정지
-                    return 3
+                    # LIDAR로 2차선 장애물이 감지되지 않은 경우 
+                    if self.lidar_data.data[1] == False:
+                        self.get_logger().info("debug 1-2")
+                        # 차선 변경
+                        return 2 
                 
-            # 대기 상태 (계속 주행)
-            else:
-                pass
+                    # 전방 LIDAR가 감지된 경우 + LIDAR로 2차선 장애물이 감지된 경우 
+                    elif self.lidar_data.data[2] == True and self.lidar_data.data[1] == True:
+                        self.get_logger().info("debug 1-3")
+                        # 정지
+                        return 3
 
 
 
         # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
         if self.car_2 and self.lane_state == 2:
-            # 1차선에 차량이 없는 경우
-            if self.car_1 == False:
-                # 2차선 차량 위치가 240 이상인 경우 (차량이 근접한 경우)
-                if self.car_data.y[self.car_location_data.index(2)] > 200:
+            # 1차선에 차량이 없고, LIDAR로 1차선 장애물이 감지되지 않은 경우
+            if self.car_1 == False and self.lidar_data.data[0] == False:
+                    self.get_logger().info("debug 2-1")
+
                     # 차선 변경
-                    return 2 
+                    return 2    
 
             # 1차선에 차량이 있는 경우
             elif self.car_1 == True:
-                # 진행 및 추월이 불가능한 경우
-                if BASE_LINE - 60 < self.car_data.y[self.car_location_data.index(1)] < BASE_LINE and  BASE_LINE < self.car_data.y[self.car_location_data.index(2)] < BASE_LINE + 60:
-                    # 정지
-                    return 3
+                # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 
+                if self.car_depth[self.car_location_data.index(1)] < self.car_depth[self.car_location_data.index(2)]:
 
-            # 대기 상태 (계속 주행)
-            else:
-                pass
+                    # LIDAR로 1차선 장애물이 감지되지 않은 경우
+                    if self.lidar_data.data[0] == False:
+                        self.get_logger().info("debug 2-2")
+                        # 차선 변경
+                        return 2 
+
+                    # 전방 LIDAR가 감지된 경우 + LIDAR로 1차선 장애물이 감지된 경우 
+                    elif self.lidar_data.data[2] == True and self.lidar_data.data[0] == True:
+                        self.get_logger().info("debug 2-3")
+                        # 정지
+                        return 3         
+
+
+
+        # 전방에 장애물이 있을 경우
+        if self.lidar_data.data[2] == True:
+            # 정지
+            return 3   
 
 
 
@@ -399,17 +418,17 @@ class motion_planner(Node):
         if self.lane_state == 1:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 180,
+                                                        vehicle_speed = 120,
                                                         path_slope = self.lane_data.slope1,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
 
 
 
@@ -417,17 +436,17 @@ class motion_planner(Node):
         elif self.lane_state == 2:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 180,
+                                                        vehicle_speed = 120,
                                                         path_slope = self.lane_data.slope2, 
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
             # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 180, right_speed = 180) 
+               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
 
 
 
@@ -443,16 +462,16 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 2 -> 1")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 255,
-                                                        path_slope=self.lane_data.slope1 * 1.5,
+                                                        vehicle_speed = 150,
+                                                        path_slope=self.lane_data.slope1 * 1.2,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-40, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 40)), left_speed = 255, right_speed = 255) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 40)), left_speed = 150, right_speed = 150) 
             
-            # Driving Mode로의 변동 조건 (Count 5 이상)
-            if self.cnt > 5:
+            # Driving Mode로의 변동 조건 (Count 20 이상)
+            if self.cnt > 1:
                 self.lane_state = 1
                 self.cnt = 0
                 return 1
@@ -463,16 +482,16 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 1 -> 2")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 255,
-                                                        path_slope=self.lane_data.slope2 * 1.5,
+                                                        vehicle_speed = 150,
+                                                        path_slope=self.lane_data.slope2 * 1.2,
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
 
             # 조향 각도 제한 [좌:-40, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 40)), left_speed = 255, right_speed = 255) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 40)), left_speed = 150, right_speed = 150) 
             
-            # Driving Mode로의 변동 조건 (Count 5 이상)
-            if self.cnt > 5:
+            # Driving Mode로의 변동 조건 (Count 20 이상)
+            if self.cnt > 1:
                 self.lane_state = 2
                 self.cnt = 0
                 return 1
@@ -492,21 +511,17 @@ class motion_planner(Node):
 
         # 신호등이 빨간색이 아닐 경우
         if self.traffic_data.data != "R":
-                # 차량이 인식되는 경우
-                try:
-                    # 1차선에서 앞 차량이 일정 거리 만큼 이동하였을 경우
-                    if self.lane_state == 1:
-                        if abs(self.car_data.y[self.car_location_data.index(1)] - BUMPER_POSITION[1]) > 200:
-                            return 1
+                # 1차선에 위치한 경우
+                if self.lane_state == 1:
+                    # 2차선, 전방 장애물이 제거된 경우
+                    if self.lidar_data.data[1] == False and self.lidar_data.data[2] == False:
+                        return 1
 
-                    # 2차선에서 앞 차량이 일정 거리 만큼 이동하였을 경우
-                    if self.lane_state == 2:
-                        if abs(self.car_data.y[self.car_location_data.index(2)] - BUMPER_POSITION[1]) > 200:
-                            return 1            
-
-                # 차량이 인식되지 않는 경우
-                except:
-                    return 1
+                # 2차선에 위치한 경우
+                if self.lane_state == 2:
+                    # 1차선, 전방 장애물이 제거된 경우
+                    if self.lidar_data.data[0] == False and self.lidar_data.data[2] == False:
+                        return 1            
 
         # 신호등이 빨간색일 경우 또는 주행 방해 요건이 있는 경우 
         return 3
