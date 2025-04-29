@@ -10,6 +10,36 @@
 
     (Github로부터 동일한 이름으로 Clone했다는 전제에서, 사용자 이름에 해당하는 부분만 변경하면 동작에 문제가 없을 것임)
 
+
+## 구동
+### 사전 실행 명령어
+```bash
+cd ~/ros2_merge
+colcon build --symlink-install   
+sudo chmod 777 *.sh  
+source ./install/setup.bash
+```
+
+### Mission 1
+```bash
+./to_m1.sh  
+ros2 launch execution_pkg m1.py
+```
+
+### Mission 2
+```bash
+./to_m2.sh  
+ros2 launch execution_pkg m2.py
+```
+
+### Mission 3 
+```bash
+./to_m3.sh  
+ros2 launch execution_pkg m3.py
+```
+
+
+
 ## 수정 사항
 
 ### ver. 1.0328.1
@@ -110,6 +140,9 @@
 
 ### ver. 1.0429.3
 - 시뮬레이션 상의 motion_planner 이식 작업 완료
+
+### ver. 1.0429.3
+- launch 파일 작성 완료
 
 ## 계획
 - motion_planner State 추가 및 개선
