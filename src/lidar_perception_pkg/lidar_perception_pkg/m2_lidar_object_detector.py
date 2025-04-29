@@ -24,23 +24,31 @@ PUB_TOPIC_NAME = 'lidar_data'
 LOG = True
 
 # 감지 카운트
-COUNT = 3
+COUNT = 2
 
 # 각도 설정 (좌)
-START_ANGLE_L = 0  # 감지 각도 범위의 시작 값
-END_ANGLE_L = 30   # 감지 각도 범위의 끝 값
+START_ANGLE_L = -45  # 감지 각도 범위의 시작 값
+END_ANGLE_L = 15   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (좌)
 RANGE_MIN_L = 0.8  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX_L = 3.0  # 감지 거리 범위의 최대값 [m]
+RANGE_MAX_L = 4.0  # 감지 거리 범위의 최대값 [m]
 
 # 각도 설정 (우)
-START_ANGLE_R = 150  # 감지 각도 범위의 시작 값
-END_ANGLE_R = 180   # 감지 각도 범위의 끝 값
+START_ANGLE_R = 165  # 감지 각도 범위의 시작 값
+END_ANGLE_R = 225   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (우)
 RANGE_MIN_R = 0.8  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX_R = 3.0  # 감지 거리 범위의 최대값 [m]
+RANGE_MAX_R = 4.0  # 감지 거리 범위의 최대값 [m]
+
+# 각도 설정 (중앙)
+START_ANGLE_C = -100  # 감지 각도 범위의 시작 값
+END_ANGLE_C = -80   # 감지 각도 범위의 끝 값
+        
+# 범위 설정 (중앙)
+RANGE_MIN_C = 0.0  # 감지 거리 범위의 최소값 [m]
+RANGE_MAX_C = 3.0  # 감지 거리 범위의 최대값 [m]
 
 # 영역 내의 점 카운트 상한
 DOT_COUNT = 3
@@ -80,6 +88,9 @@ class lidar_object_detector(Node):
         self.detection_reg_r = []
         self.state_reg_r = bool()
 
+        self.detection_reg_c = []
+        self.state_reg_c = bool()
+
         # 로깅 여부 설정
         if LOG == False: 
             self.get_logger().set_level(logging.FATAL)
@@ -92,19 +103,22 @@ class lidar_object_detector(Node):
         # 감지 여부 추출
         detected_l = self.detect_object(ranges=ranges, start_angle=START_ANGLE_L, end_angle=END_ANGLE_L, range_min=RANGE_MIN_L, range_max=RANGE_MAX_L)
         detected_r = self.detect_object(ranges=ranges, start_angle=START_ANGLE_R, end_angle=END_ANGLE_R, range_min=RANGE_MIN_R, range_max=RANGE_MAX_R)
+        detected_c = self.detect_object(ranges=ranges, start_angle=START_ANGLE_C, end_angle=END_ANGLE_C, range_min=RANGE_MIN_C, range_max=RANGE_MAX_C)
         
         # 감지 카운트
         detection_result_l = self.check_consecutive_detections_l(detected_l, COUNT)
         detection_result_r = self.check_consecutive_detections_r(detected_r, COUNT)
+        detection_result_c = self.check_consecutive_detections_c(detected_c, COUNT)
 
         # 메시지 전송
         detection_msg = BoolMultiArray()
         detection_msg.data.append(detection_result_l)
         detection_msg.data.append(detection_result_r)
+        detection_msg.data.append(detection_result_c)
 
         self.publisher.publish(detection_msg)
 
-        self.get_logger().info(f'Detection Result = {detection_result_l} {detection_result_r}')
+        self.get_logger().info(f'Detection Result = {detection_result_l} {detection_result_r} {detection_result_c}')
 
     def detect_object(self, ranges, start_angle, end_angle, range_min, range_max):
         # 항상 360 출력
@@ -168,6 +182,23 @@ class lidar_object_detector(Node):
 
         return self.state_reg_r
 
+    def check_consecutive_detections_c(self, detection, cnt):
+        # 레지스터에 감지 데이터 추가
+        self.detection_reg_c.append(detection)
+
+        # 레지스터 저장 개수 제한
+        if len(self.detection_reg_c) > cnt:
+            self.detection_reg_c.pop(0)
+
+        # T -> F 변환 조건
+        if self.state_reg_c and self.detection_reg_c.count(False) >= cnt:
+            self.state_reg_c = False
+        
+        # F -> T 변환 조건
+        elif not self.state_reg_c and self.detection_reg_c.count(True) >= cnt:
+            self.state_reg_c = True
+
+        return self.state_reg_c
 
 def main(args=None):
     rclpy.init(args=args)

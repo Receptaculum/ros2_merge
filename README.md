@@ -105,6 +105,9 @@
 ### ver. 1.0429.1
 - mission에 대한 motion_planner 파일 정리
 
+### ver. 1.0429.2
+- mission별 LIDAR 설정 분기
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
