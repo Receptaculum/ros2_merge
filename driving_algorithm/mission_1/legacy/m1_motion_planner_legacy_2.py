@@ -1,6 +1,8 @@
-#################
-# For Mission 1 #
-#################
+##########################
+# For Mission 1 - Legacy #
+##########################
+
+# 안정화 버전
 
 # 신호등 기반 버전
 # best.0421.1959.pt 사용 필수!
@@ -44,9 +46,9 @@ K_Angle_1 = 0.17 - 0.03
 K_Stanley_2 = 0.3
 K_Angle_2 = 0.113 - 0.01
 
-K_Stanley_1_Turn = K_Stanley_1 * 1
+K_Stanley_1_Turn = K_Stanley_1 * 1.3
 K_Stanley_2_Turn = K_Stanley_2 * 1
-K_Angle_1_Turn = K_Angle_1 * 1.5
+K_Angle_1_Turn = K_Angle_1 * 1
 K_Angle_2_Turn = K_Angle_2 * 1
 
 # 디버그 모드
@@ -245,8 +247,8 @@ class motion_planner(Node):
         if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
             return 2
 
-        # 2차선에 위치하고 신호등이 3번 감지된 경우
-        elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 3:
+        # 2차선에 위치하고 신호등이 2번 감지된 경우
+        elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 2:
             return 2
 
         # 1차선에 있을 경우, 속도 및 조향 설정
@@ -298,8 +300,8 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1_Turn,
                                                         k_stanley=K_Stanley_1_Turn)
             
-            # 조향 각도 제한 [좌:-30, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 40)), left_speed = 120, right_speed = 120) 
+            # 조향 각도 제한 [좌:-20, 우:40]
+            self.send_command(steer_angle = int(np.clip(steer_angle, -20, 40)), left_speed = 120, right_speed = 120) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:

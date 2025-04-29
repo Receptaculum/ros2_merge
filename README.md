@@ -102,6 +102,9 @@
 ### ver. 1.0427.1
 - 기존 serial_communicator 간 호환성 확보
 
+### ver. 1.0429.1
+- mission에 대한 motion_planner 파일 정리
+
 ## 계획
 - motion_planner State 추가 및 개선
 - Arduino 최적화
