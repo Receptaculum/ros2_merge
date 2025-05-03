@@ -144,6 +144,5 @@ ros2 launch execution_pkg m3.py
 ### ver. 1.0429.3
 - launch 파일 작성 완료
 
-## 계획
-- motion_planner State 추가 및 개선
-- Arduino 최적화
+### ver. 1.0503.1
+- 모터 구동 Arduino 파일 추가
