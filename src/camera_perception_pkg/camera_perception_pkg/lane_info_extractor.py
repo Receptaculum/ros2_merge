@@ -173,7 +173,7 @@ def roi_extractor(img, cutting_idx):
 def dominant_gradient(image, theta_limit):
     right_limit_radian = np.deg2rad(90 + (90 - theta_limit))
     left_limit_radian = np.deg2rad(90 - (90 - theta_limit))
-    height, width = (image.shape[0], image.shape[1])
+    _, width = (image.shape[0], image.shape[1])
     if image.dtype != np.uint8:
         image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
     image_original = image.copy()
@@ -213,7 +213,7 @@ def dominant_gradient(image, theta_limit):
         return (0, None)
 
 
-def get_lane_center(cv_image: np.array, detection_height: int, detection_thickness: int, road_gradient: float, lane_width: int) -> int:
+def get_lane_center(cv_image: np.array, detection_height: int, detection_thickness: int, lane_width: int) -> int:
         detection_area_upper_bound = detection_height - int(detection_thickness/2)
         detection_area_lower_bound = detection_height + int(detection_thickness/2)
 

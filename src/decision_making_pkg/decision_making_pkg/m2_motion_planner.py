@@ -295,7 +295,6 @@ class motion_planner(Node):
 
         except Exception as e:
             self.get_logger().warn(f"{e}")
-            pass
 
 
 ### <State 정의 함수> ####################################################################

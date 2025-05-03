@@ -54,10 +54,13 @@ class LineDetector(Node):
 
 
     def yolov8_detections_callback(self, msg):
-        msg = Float32MultiArray()
+        line = Float32MultiArray()
+
+        print(msg)
+        ###### 코드 작성 요구 #####
 
         # 결과 Publish
-        self.publisher.publish(msg)
+        self.publisher.publish(line)
 
 
 def main(args=None):
