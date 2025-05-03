@@ -81,7 +81,7 @@ class image_publisher(Node):
 
     def publish_callback(self):
         ret, frame = self.cap.read() # 영상 프레임 읽기
-        frame = cv2.resize(frame, (FRAME_SIZE[0], FRAME_SIZE[1])) # 영상 프레임 강제 조정
+        # frame = cv2.resize(frame, (FRAME_SIZE[0], FRAME_SIZE[1])) # 영상 프레임 강제 조정
 
         if ret == True: # 정상
             self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
