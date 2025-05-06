@@ -99,4 +99,14 @@ def generate_launch_description():
         # decision_making_pkg <End>
 
         ################################################### 
+
+        # serial_communication_pkg <Start>
+        Node(
+            package='serial_communication_pkg', 
+            executable='serial_communicator_legacy',
+            output='screen'
+        ),
+         # serial_communication_pkg <End>
+
+        ################################################### 
     ])
