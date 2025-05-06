@@ -18,6 +18,7 @@ SUB_TOPIC_LANE = "lane_data"
 SUB_TOPIC_TRAFFIC = "traffic_data"
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
+SUB_TOPIC_YOLO_FOR_CROSSWALK = "crosswalk_data"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -69,6 +70,7 @@ class motion_planner(Node):
         self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
+        self.sub_yolo_for_crosswalk = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_FOR_CROSSWALK, self.update_yolo_data_cross, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
@@ -79,6 +81,7 @@ class motion_planner(Node):
         self.traffic_data = None
         self.lidar_data = None
         self.yolo_data = None
+        self.yolo_data_cross = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -93,6 +96,7 @@ class motion_planner(Node):
         self.steer_angle_reg = 0 # send_command 함수에서 사용
         self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
+        self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
 
         # 카운트 저장소 선언
         self.cnt = 0
@@ -127,6 +131,18 @@ class motion_planner(Node):
         # 10개로 Register 크기 제한
         if len(self.traffic_reg_yolo) > 10:
             self.traffic_reg_yolo.pop(0)
+
+    def update_yolo_data_cross(self, msg):
+        self.yolo_data_cross = msg
+
+        # Croswalk 감지 여부 기록
+        self.crosswalk_reg.append(len(self.yolo_data_cross.crosswalk) > 0)
+        
+        # 5개로 Register 크기 제한
+        if len(self.crosswalk_reg) > 5:
+            self.crosswalk_reg.pop(0)
+
+        # self.get_logger().info(f"cross {self.crosswalk_reg}")
 
 ######################################################################################################
 
@@ -199,7 +215,7 @@ class motion_planner(Node):
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
+        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.yolo_data_cross != None:
 
             # 차량 위치 결정
             d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
@@ -223,7 +239,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}")
+            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.yolo_data_cross != None}")
 
             return 0
 
@@ -233,6 +249,8 @@ class motion_planner(Node):
     def drive_mode(self) -> int:
         self.get_logger().info(f"drive_mode : {self.lane_state}")
 
+        # 신호등 감지 횟수 기반 로직 - Start #################################################################################
+        '''
         # 1차선에 위치하고 신호등이 5번 감지된 경우
         if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
             return 2
@@ -240,6 +258,41 @@ class motion_planner(Node):
         # 2차선에 위치하고 신호등이 3번 감지된 경우
         elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 3:
             return 2
+        '''
+        # 신호등 감지 횟수 기반 로직 - End  ###################################################################################
+        
+
+        # 신호등 위치 기반 로직  - Start #####################################################################################
+        '''
+        # 신호등이 감지되었을 경우
+        if len(self.yolo_data.traffic_light) > 0:
+            # 신호등의 위치가 185 이상이고, 1차선에 위치한 경우
+            if np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max() > 181 and self.lane_state == 1:
+                return 2
+            # 신호등의 위치가 185 이상이고, 2차선에 위치한 경우
+            elif np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max() > 180 and self.lane_state == 2:
+                return 2
+        ''' 
+        # 신호등 위치 기반 로직  - End #######################################################################################
+
+
+        # 횡단보도 위치 기반 로직  - Start #####################################################################################
+
+        # 1차선에서 횡단보도가 연속 2번 감지되었을 경우
+        if len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 2:
+            # 횡단보도의 위치가 300 이상인 경우
+            if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+                return 2
+
+        # 2차선에서 횡단보도가 연속 3번 감지되었을 경우
+        elif len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 3:
+            # 횡단보도의 위치가 300 이상인 경우
+            if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+                return 2
+
+        # 횡단보도 위치 기반 로직  - End #######################################################################################
+
+
 
         # 1차선에 있을 경우, 속도 및 조향 설정
         if self.lane_state == 1:
@@ -310,8 +363,8 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_2_Turn,
                                                         k_stanley=K_Stanley_2_Turn)
 
-            # 조향 각도 제한 [좌:-40, 우:20]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 20)), left_speed = 120, right_speed = 120) 
+            # 조향 각도 제한 [좌:-40, 우:30]
+            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 30)), left_speed = 120, right_speed = 120) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:

@@ -339,6 +339,64 @@ class motion_planner(Node):
     def drive_mode(self) -> int:
         self.get_logger().info(f"drive_mode : {self.lane_state}")                               
 
+        ##### 면적 기반 논리 - Start #############################################################################################
+
+        # 전방에 장애물이 있을 경우
+        if self.lidar_data.data[2] == True:
+            # 정지
+            return 3   
+
+
+        # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
+        if self.car_1 and self.lane_state == 1:
+            # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
+            if self.car_2 == False and self.lidar_data.data[1] == False:
+                    # 차선 변경
+                    return 2                 
+
+            # 2차선에 차량이 있는 경우
+            elif self.car_2 == True:
+                # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
+                if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
+                    # 차선 변경
+                    return 2 
+                
+                # 전방과 2차선에 장애물이 감지된 경우
+                elif self.lidar_data.data[1] == True and self.lidar_data.data[2] == True:
+                        # 정지
+                        return 3
+
+
+        # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
+        if self.car_2 and self.lane_state == 2:
+            # 1차선에 차량이 없고, LIDAR로 1차선 장애물이 감지되지 않은 경우
+            if self.car_1 == False and self.lidar_data.data[0] == False:
+                    # 차선 변경
+                    return 2    
+
+            # 1차선에 차량이 있는 경우
+            elif self.car_1 == True:
+                # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
+                if self.car_data.area[self.car_location_data.index(1)] < self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[0] == False:
+                    # 차선 변경
+                    return 2 
+
+                # 전방과 1차선에 장애물이 감지된 경우
+                elif self.lidar_data.data[0] == True and self.lidar_data.data[2] == True:
+                        # 정지
+                        return 3     
+
+        ##### 면적 기반 논리 - End ###############################################################################################
+
+
+        ##### 깊이 기반 논리 - Start #############################################################################################
+        '''
+        # 전방에 장애물이 있을 경우
+        if self.lidar_data.data[2] == True:
+            # 정지
+            return 3   
+
+
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
             # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
@@ -350,21 +408,18 @@ class motion_planner(Node):
 
             # 2차선에 차량이 있는 경우
             elif self.car_2 == True:
-                # 1차선 차량의 면적이 2차선 차량보다 더 큰 경우
+                # 1차선 차량이 2차선 차량보다 더 가까이 있는 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우 
                 if self.car_depth[self.car_location_data.index(1)] > self.car_depth[self.car_location_data.index(2)]:
-
-                    # LIDAR로 2차선 장애물이 감지되지 않은 경우 
                     if self.lidar_data.data[1] == False:
                         self.get_logger().info("debug 1-2")
                         # 차선 변경
                         return 2 
                 
-                    # 전방 LIDAR가 감지된 경우 + LIDAR로 2차선 장애물이 감지된 경우 
-                    elif self.lidar_data.data[2] == True and self.lidar_data.data[1] == True:
-                        self.get_logger().info("debug 1-3")
-                        # 정지
-                        return 3
-
+                # 전방 LIDAR가 감지된 경우 + LIDAR로 2차선 장애물이 감지된 경우 
+                if self.lidar_data.data[2] == True and self.lidar_data.data[1] == True:
+                    self.get_logger().info("debug 1-3")
+                    # 정지
+                    return 3
 
 
         # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
@@ -378,28 +433,20 @@ class motion_planner(Node):
 
             # 1차선에 차량이 있는 경우
             elif self.car_1 == True:
-                # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 
+                # 2차선 차량이 1차선 차량보다 더 가까이 있는 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
                 if self.car_depth[self.car_location_data.index(1)] < self.car_depth[self.car_location_data.index(2)]:
-
-                    # LIDAR로 1차선 장애물이 감지되지 않은 경우
                     if self.lidar_data.data[0] == False:
                         self.get_logger().info("debug 2-2")
                         # 차선 변경
                         return 2 
 
-                    # 전방 LIDAR가 감지된 경우 + LIDAR로 1차선 장애물이 감지된 경우 
-                    elif self.lidar_data.data[2] == True and self.lidar_data.data[0] == True:
-                        self.get_logger().info("debug 2-3")
-                        # 정지
-                        return 3         
-
-
-
-        # 전방에 장애물이 있을 경우
-        if self.lidar_data.data[2] == True:
-            # 정지
-            return 3   
-
+                # 전방 LIDAR가 감지된 경우 + LIDAR로 1차선 장애물이 감지된 경우 
+                if self.lidar_data.data[2] == True and self.lidar_data.data[0] == True:
+                    self.get_logger().info("debug 2-3")
+                    # 정지
+                    return 3         
+        '''
+        ##### 깊이 기반 논리 - End ###############################################################################################
 
 
         # 신호등이 빨간색인 경우
@@ -510,17 +557,10 @@ class motion_planner(Node):
 
         # 신호등이 빨간색이 아닐 경우
         if self.traffic_data.data != "R":
-                # 1차선에 위치한 경우
-                if self.lane_state == 1:
-                    # 2차선, 전방 장애물이 제거된 경우
-                    if self.lidar_data.data[1] == False and self.lidar_data.data[2] == False:
-                        return 1
-
-                # 2차선에 위치한 경우
-                if self.lane_state == 2:
-                    # 1차선, 전방 장애물이 제거된 경우
-                    if self.lidar_data.data[0] == False and self.lidar_data.data[2] == False:
-                        return 1            
+                
+                # 전방 장애물이 제거된 경우
+                if self.lidar_data.data[2] == False:
+                    return 1   
 
         # 신호등이 빨간색일 경우 또는 주행 방해 요건이 있는 경우 
         return 3
