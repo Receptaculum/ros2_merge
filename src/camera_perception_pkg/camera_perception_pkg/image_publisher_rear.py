@@ -18,7 +18,7 @@ import logging
 ## <Parameter> #######################################################################################
 
 # 영상 소스
-FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video_rear.mp4"
+FRAME_SRC = "/dev/video0"
 
 # 영상 크기 (가로, 세로)
 FRAME_SIZE = [640, 480]
@@ -83,7 +83,6 @@ class image_publisher(Node):
         ret, frame = self.cap.read() # 영상 프레임 읽기
 
         if ret == True: # 정상
-            frame = cv2.resize(frame, (FRAME_SIZE[0], FRAME_SIZE[1])) # 영상 프레임 강제 조정
             self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
             self.get_logger().info("frame published")
 

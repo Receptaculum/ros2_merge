@@ -83,7 +83,6 @@ class image_publisher(Node):
         ret, frame = self.cap.read() # 영상 프레임 읽기
 
         if ret == True: # 정상
-            frame = cv2.resize(frame, (FRAME_SIZE[0], FRAME_SIZE[1])) # 영상 프레임 강제 조정
             self.publisher.publish(self.bridge.cv2_to_imgmsg(frame))
             self.get_logger().info("frame published")
 
