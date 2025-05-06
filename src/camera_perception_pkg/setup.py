@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'image_publisher = camera_perception_pkg.image_publisher:main',
             'yolov8 = camera_perception_pkg.yolov8:main',
+            'yolov8_for_crosswalk = camera_perception_pkg.yolov8_for_crosswalk:main',
             'image_publisher_rear = camera_perception_pkg.image_publisher_rear:main',
             'yolov8_rear = camera_perception_pkg.yolov8_rear:main',
             'car_info_extractor = camera_perception_pkg.car_info_extractor:main',

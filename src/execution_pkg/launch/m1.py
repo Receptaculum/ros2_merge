@@ -27,6 +27,12 @@ def generate_launch_description():
 
         Node(
             package='camera_perception_pkg', 
+            executable='yolov8_for_crosswalk',
+            output='screen'
+        ),
+
+        Node(
+            package='camera_perception_pkg', 
             executable='traffic_light_detector',
             output='screen'
         ),

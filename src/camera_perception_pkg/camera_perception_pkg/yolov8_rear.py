@@ -80,9 +80,10 @@ class yolov8(Node):
 
         # YOLO Model 선언
         self.model = YOLO(os.path.dirname(__file__) + "/" + pt_name) 
+        self.model.model.eval()
 
         # YOLO Model 컴파일
-        self.model.model = torch.compile(self.model.model, mode="max-autotune").eval()
+        self.model.model = torch.compile(self.model.model, mode="max-autotune")
 
         if device == "cuda": # Nvidia GPU 설정
             self.model.to(device)
