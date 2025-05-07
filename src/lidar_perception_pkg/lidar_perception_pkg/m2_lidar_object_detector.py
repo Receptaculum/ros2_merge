@@ -50,6 +50,23 @@ END_ANGLE_C = -80   # 감지 각도 범위의 끝 값
 RANGE_MIN_C = 0.0  # 감지 거리 범위의 최소값 [m]
 RANGE_MAX_C = 3.0  # 감지 거리 범위의 최대값 [m]
 
+# 각도 설정 (중앙 좌측)
+START_ANGLE_C_L = -80  # 감지 각도 범위의 시작 값
+END_ANGLE_C_L = -60   # 감지 각도 범위의 끝 값
+        
+# 범위 설정 (중앙 좌측)
+RANGE_MIN_C_L = 0.0  # 감지 거리 범위의 최소값 [m]
+RANGE_MAX_C_L = 1.5  # 감지 거리 범위의 최대값 [m]
+
+# 각도 설정 (중앙 우측)
+START_ANGLE_C_R = -120  # 감지 각도 범위의 시작 값
+END_ANGLE_C_R = -100   # 감지 각도 범위의 끝 값
+        
+# 범위 설정 (중앙 우측)
+RANGE_MIN_C_R = 0.0  # 감지 거리 범위의 최소값 [m]
+RANGE_MAX_C_R = 1.5  # 감지 거리 범위의 최대값 [m]
+
+
 # 영역 내의 점 카운트 상한
 DOT_COUNT = 3
 
@@ -103,8 +120,13 @@ class lidar_object_detector(Node):
         # 감지 여부 추출
         detected_l = self.detect_object(ranges=ranges, start_angle=START_ANGLE_L, end_angle=END_ANGLE_L, range_min=RANGE_MIN_L, range_max=RANGE_MAX_L)
         detected_r = self.detect_object(ranges=ranges, start_angle=START_ANGLE_R, end_angle=END_ANGLE_R, range_min=RANGE_MIN_R, range_max=RANGE_MAX_R)
-        detected_c = self.detect_object(ranges=ranges, start_angle=START_ANGLE_C, end_angle=END_ANGLE_C, range_min=RANGE_MIN_C, range_max=RANGE_MAX_C)
-        
+
+        detected_c_center = self.detect_object(ranges=ranges, start_angle=START_ANGLE_C, end_angle=END_ANGLE_C, range_min=RANGE_MIN_C, range_max=RANGE_MAX_C) 
+        detected_c_left = self.detect_object(ranges=ranges, start_angle=START_ANGLE_C_L, end_angle=END_ANGLE_C_L, range_min=RANGE_MIN_C_L, range_max=RANGE_MAX_C_L)
+        detected_c_right = self.detect_object(ranges=ranges, start_angle=START_ANGLE_C_R, end_angle=END_ANGLE_C_R, range_min=RANGE_MIN_C_R, range_max=RANGE_MAX_C_R)
+
+        detected_c = detected_c_center or detected_c_left or detected_c_right
+
         # 감지 카운트
         detection_result_l = self.check_consecutive_detections_l(detected_l, COUNT)
         detection_result_r = self.check_consecutive_detections_r(detected_r, COUNT)
