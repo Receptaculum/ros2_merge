@@ -144,7 +144,7 @@ class yolov8(Node):
         predicted = self.model.predict(frame, verbose=False) # Frame Segmentation 처리
 
         if self.debug == True: # 디버깅(화면 출력) 여부 결정
-            cv2.imshow("YOLO", predicted[0].plot())
+            cv2.imshow("YOLO-CROSSWALK", predicted[0].plot())
             cv2.waitKey(5)
 
         # 카운트를 위한 변수 선언
