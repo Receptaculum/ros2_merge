@@ -8,6 +8,8 @@ from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
 from interfaces_pkg.msg import MotionCommand
 
+import numpy as np
+
 #---------------Variable Setting---------------
 # Subscribe할 토픽 이름
 SUB_TOPIC_NAME = "command_data"
@@ -35,9 +37,9 @@ class SerialSenderNode(Node):
     self.subscription = self.create_subscription(MotionCommand, self.sub_topic, self.data_callback, qos_profile)
 
   def data_callback(self, msg):
-    steering = msg.steering
-    left_speed = msg.left_speed
-    right_speed = msg.right_speed
+    steering = int(np.interp(msg.steering, [-40, 40], [-20, 20]))
+    left_speed = int(np.clip(msg.left_speed, -255, 255)) 
+    right_speed = int(np.clip(msg.right_speed, -255, 255))   
 
     serial_msg =  convert_serial_message(steering, left_speed, right_speed)
     self.get_logger().info(f"data: {serial_msg}")
