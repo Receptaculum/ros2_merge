@@ -30,11 +30,17 @@ PERIOD = 0.1
 BUMPER_POSITION = [320, 462]
 
 # 보정 상수
+#K_Stanley_1 = 0.32
+#K_Angle_1 = 0.17 - 0.03
+
+#K_Stanley_2 = 0.3
+#K_Angle_2 = 0.113 - 0.01
+
 K_Stanley_1 = 0.32
-K_Angle_1 = 0.17 - 0.03
+K_Angle_1 = 0.2
 
 K_Stanley_2 = 0.3
-K_Angle_2 = 0.113 - 0.01
+K_Angle_2 = 0.2
 
 K_Stanley_1_Turn = K_Stanley_1 * 1
 K_Stanley_2_Turn = K_Stanley_2 * 1
@@ -250,7 +256,7 @@ class motion_planner(Node):
         self.get_logger().info(f"drive_mode : {self.lane_state}")
 
         # 신호등 감지 횟수 기반 로직 - Start #################################################################################
-        '''
+
         # 1차선에 위치하고 신호등이 5번 감지된 경우
         if self.lane_state == 1 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 5:
             return 2
@@ -258,7 +264,7 @@ class motion_planner(Node):
         # 2차선에 위치하고 신호등이 3번 감지된 경우
         elif self.lane_state == 2 and len(self.yolo_data.traffic_light) > 0 and self.traffic_reg_yolo.count(True) >= 3:
             return 2
-        '''
+        
         # 신호등 감지 횟수 기반 로직 - End  ###################################################################################
         
 
@@ -277,7 +283,7 @@ class motion_planner(Node):
 
 
         # 횡단보도 위치 기반 로직  - Start #####################################################################################
-
+        '''
         # 1차선에서 횡단보도가 연속 2번 감지되었을 경우
         if len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 2:
             # 횡단보도의 위치가 300 이상인 경우
@@ -289,7 +295,7 @@ class motion_planner(Node):
             # 횡단보도의 위치가 300 이상인 경우
             if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
                 return 2
-
+        '''
         # 횡단보도 위치 기반 로직  - End #######################################################################################
 
 
@@ -298,33 +304,33 @@ class motion_planner(Node):
         if self.lane_state == 1:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 100,
                                                         path_slope = self.lane_data.slope1,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+               self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
 
         # 2차선에 있을 경우, 속도 및 조향 설정
         elif self.lane_state == 2:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 100,
                                                         path_slope = self.lane_data.slope2, 
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
             # Differential 구현
             if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+                self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = 120, right_speed = 120) 
+               self.send_command(steer_angle = steer_angle, left_speed = 100, right_speed = 100) 
 
         # 계속 주행
         return 1
@@ -338,13 +344,13 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 2 -> 1")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 100,
                                                         path_slope=self.lane_data.slope1,
                                                         k_angle=K_Angle_1_Turn,
                                                         k_stanley=K_Stanley_1_Turn)
             
             # 조향 각도 제한 [좌:-30, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 40)), left_speed = 120, right_speed = 120) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 40)), left_speed = 100, right_speed = 100) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:
@@ -358,13 +364,13 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 1 -> 2")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = 120,
+                                                        vehicle_speed = 100,
                                                         path_slope=self.lane_data.slope2,
                                                         k_angle=K_Angle_2_Turn,
                                                         k_stanley=K_Stanley_2_Turn)
 
             # 조향 각도 제한 [좌:-40, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 30)), left_speed = 120, right_speed = 120) 
+            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 30)), left_speed = 100, right_speed = 100) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:

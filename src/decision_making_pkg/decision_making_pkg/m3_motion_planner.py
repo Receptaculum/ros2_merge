@@ -25,7 +25,7 @@ SUB_TOPIC_LINE = "line_data_rear"
 SUB_TOPIC_DEPTH = "depth_data"
 
 # 발행 토픽 이름
-PUB_TOPIC_NAME = "topic_control_signal"
+PUB_TOPIC_NAME = "command_data"
 
 # 연산 주기 설정
 PERIOD = 0.1

@@ -24,14 +24,14 @@ SUB_TOPIC_NAME_TF = 'lidar_data'
 SIZE = [900, 900]
 
 # 좌측
-MIN_L = 0.8 # 최소 거리 [m]
-MAX_L = 4.0 # 최대 거리 [m]
+MIN_L = 0.3 # 최소 거리 [m]
+MAX_L = 2.0 # 최대 거리 [m]
 MIN_ANGLE_L = 0 # 최소 각도
 MAX_ANGLE_L = 20 # 최대 각도
 
 # 우측
-MIN_R = 0.8 # 최소 거리 [m]
-MAX_R = 4.0 # 최대 거리 [m]
+MIN_R = 0.3 # 최소 거리 [m]
+MAX_R = 2.0 # 최대 거리 [m]
 MIN_ANGLE_R = 160 # 최소 각도
 MAX_ANGLE_R = 180 # 최대 각도
 

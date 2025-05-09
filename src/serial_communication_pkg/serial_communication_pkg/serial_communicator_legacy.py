@@ -40,6 +40,8 @@ class SerialSenderNode(Node):
     right_speed = msg.right_speed
 
     serial_msg =  convert_serial_message(steering, left_speed, right_speed)
+    self.get_logger().info(f"data: {serial_msg}")
+
     ser.write(serial_msg.encode())
 
 def convert_serial_message(steering, left_speed, right_speed):
