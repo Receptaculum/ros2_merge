@@ -256,7 +256,7 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 100, right_speed = 100)
+        self.send_command(steer_angle = -30, left_speed = 100, right_speed = 70)
 
         # 2개의 차량이 시야에 감지된 경우
         if len(self.car_rear_data.x) == 2:
@@ -272,7 +272,7 @@ class motion_planner(Node):
         self.get_logger().info(f"stop_mode_1")   
 
         # 정지
-        self.send_command(steer_angle = -40, left_speed = 0, right_speed = 0)
+        self.send_command(steer_angle = -30, left_speed = 0, right_speed = 0)
 
         # 1초 지연
         time.sleep(1)
@@ -346,7 +346,7 @@ class motion_planner(Node):
         time.sleep(2)
 
         # 우회전
-        self.send_command(steer_angle = 40, left_speed = 200, right_speed = 200)
+        self.send_command(steer_angle = 30, left_speed = 200, right_speed = 200)
 
         # 5초 지연
         time.sleep(5.5)
