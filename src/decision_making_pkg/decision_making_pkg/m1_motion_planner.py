@@ -183,7 +183,7 @@ class motion_planner(Node):
 
             # 조향각 계산
             steering_angle = heading_error + np.arctan(k_stanley * lateral_error / (vehicle_speed + 1e-6))*(180/np.pi)
-            return int(np.clip(steering_angle, -40, 40)) # 각도 제한 (-40~40)
+            return int(np.clip(steering_angle, -30, 30)) # 각도 제한 (-30~30)
 
 
     # 판단 로직 작성부
@@ -346,8 +346,8 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1_Turn,
                                                         k_stanley=K_Stanley_1_Turn)
             
-            # 조향 각도 제한 [좌:-30, 우:40]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 40)), left_speed = SPEED, right_speed = SPEED) 
+            # 조향 각도 제한 [좌:-30, 우:30]
+            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED, right_speed = SPEED) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:
@@ -366,8 +366,8 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_2_Turn,
                                                         k_stanley=K_Stanley_2_Turn)
 
-            # 조향 각도 제한 [좌:-40, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -40, 30)), left_speed = SPEED, right_speed = SPEED) 
+            # 조향 각도 제한 [좌:-30, 우:30]
+            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED, right_speed = SPEED) 
             
             # Driving Mode로의 변동 조건 (Count 90 이상)
             if self.cnt > 90:

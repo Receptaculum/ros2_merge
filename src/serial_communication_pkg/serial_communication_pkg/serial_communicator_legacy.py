@@ -37,7 +37,7 @@ class SerialSenderNode(Node):
     self.subscription = self.create_subscription(MotionCommand, self.sub_topic, self.data_callback, qos_profile)
 
   def data_callback(self, msg):
-    steering = int(np.interp(msg.steering, [-40, 40], [-20, 20]))
+    steering = int(np.interp(msg.steering, [-30, 30], [-15, 15]))
     left_speed = int(np.clip(msg.left_speed, -255, 255)) 
     right_speed = int(np.clip(msg.right_speed, -255, 255))   
 
