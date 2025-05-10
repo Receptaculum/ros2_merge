@@ -7,10 +7,13 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray, MotionCommand
 from std_msgs.msg import String, Bool, Int8MultiArray
+from sensor_msgs.msg import LaserScan
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import numpy as np
 import cv_bridge
+
+import time
 
 ## <Parameter> #####################################################################################
 
@@ -21,6 +24,7 @@ SUB_TOPIC_TRAFFIC = "traffic_data"
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
 SUB_TOPIC_DEPTH = "depth_data"
+SUB_TOPIC_LIDAR_DISTANCE = "lidar_processed"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -72,6 +76,7 @@ class motion_planner(Node):
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
+        self.sub_lidar_distance = self.create_subscription(LaserScan, SUB_TOPIC_LIDAR_DISTANCE, self.update_lidar_distance, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
@@ -86,6 +91,7 @@ class motion_planner(Node):
         self.lidar_data = None
         self.yolo_data = None
         self.depth_data = None
+        self.lidar_distance_data = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -164,6 +170,11 @@ class motion_planner(Node):
 
     def update_depth_data(self, msg):
         self.depth_data = msg # Depth Image
+
+#######################################################################
+
+    def update_lidar_distance(self, msg):
+        self.lidar_distance_data = msg # lidar distance data
 
 ######################################################################################################
 
@@ -293,6 +304,10 @@ class motion_planner(Node):
             # State 3 : stop_mode
             elif self.state == 3:
                 self.state = self.stop_mode()
+
+            # State 4 : back_up_mode
+            elif self.state == 4:
+                self.state = self.back_up_mode()
 
         except Exception as e:
             self.get_logger().warn(f"{e}")
@@ -554,6 +569,11 @@ class motion_planner(Node):
         self.get_logger().info(f"stop_mode : {self.lane_state}")
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
+        # 전방 물체가 접근할 경우 또는 전방 물체와 너무 근접한 경우
+        if self.lidar_distance_data.ranges[-90] < 1:
+            # 후진
+            return 4
+
         # 신호등이 빨간색이 아닐 경우
         if self.traffic_data.data != "R":
                 
@@ -563,6 +583,19 @@ class motion_planner(Node):
 
         # 신호등이 빨간색일 경우 또는 주행 방해 요건이 있는 경우 
         return 3
+
+########################################################################################
+
+    # State 4
+    def back_up_mode(self) -> int:
+        self.get_logger().info(f"back_up_mode : {self.lane_state}")
+        self.send_command(steer_angle = 0, left_speed = -50, right_speed = -50)
+
+        # 1.5초 지연
+        time.sleep(1.5)
+
+        # 주행 모드로 이동
+        return 1
 
 ########################################################################################
 
