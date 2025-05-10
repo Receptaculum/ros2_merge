@@ -32,6 +32,9 @@ LOG = True
 # 화면 출력
 DEBUG = True
 
+# Thread 수 (CPU 전용, 본인의 CPU Core 수보다 약간 적게 설정)
+THREAD = 2
+
 ######################################################################################################
 
 
@@ -65,7 +68,7 @@ class DepthExtractor(Node):
             device = torch.device("cuda") 
 
         else:
-            torch.set_num_threads(2)
+            torch.set_num_threads(THREAD)
             device = torch.device("cpu")
 
         # MIDAS 모델 호출

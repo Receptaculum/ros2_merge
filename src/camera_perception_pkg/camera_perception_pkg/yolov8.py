@@ -41,9 +41,6 @@ DEBUG = True
 # 로깅 여부
 LOG = True
 
-# 동작 모드 (cpu, cuda, xpu)
-DEVICE = "cpu"
-
 # Thread 수 (CPU 전용, 본인의 CPU Core 수보다 약간 적게 설정)
 THREAD = 4
 
@@ -72,7 +69,7 @@ INV_COLOR = False
 
 
 class yolov8(Node):
-    def __init__(self, node_name, topic_name : list, sub_topic_name, pt_name, debug, label_name, device, thread, log):
+    def __init__(self, node_name, topic_name : list, sub_topic_name, pt_name, debug, label_name, thread, log):
         super().__init__(node_name)
 
         # 속도 최적화를 위한 설정
@@ -85,15 +82,12 @@ class yolov8(Node):
         # YOLO Model 컴파일
         self.model.model = torch.compile(self.model.model, mode="max-autotune")
 
-        if device == "cuda": # Nvidia GPU 설정
-            self.model.to(device)
+        if torch.cuda.is_available(): # Nvidia GPU 설정
+            self.model.to("cuda")
 
-        elif device == "xpu": # Intel GPU 설정
-            self.model.to(device)
-
-        elif device == "cpu": # CPU 설정
+        else: # CPU 설정
             torch.set_num_threads(thread)
-            self.model.to(device)
+            self.model.to("cpu")
 
         self.qos_pub = QoSProfile( # Publisher QOS 설정
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -199,7 +193,7 @@ class yolov8(Node):
 
 def main():
     rclpy.init()
-    yolov8_node = yolov8(NODE_NAME, TOPIC_NAME, SUB_TOPIC_NAME, PT_NAME, DEBUG, LABEL_NAME, DEVICE, THREAD, LOG)
+    yolov8_node = yolov8(NODE_NAME, TOPIC_NAME, SUB_TOPIC_NAME, PT_NAME, DEBUG, LABEL_NAME, THREAD, LOG)
     rclpy.spin(yolov8_node)
 
     yolov8_node.shutdown()
