@@ -589,7 +589,7 @@ class motion_planner(Node):
     # State 4
     def back_up_mode(self) -> int:
         self.get_logger().info(f"back_up_mode : {self.lane_state}")
-        self.send_command(steer_angle = 0, left_speed = -50, right_speed = -50)
+        self.send_command(steer_angle = 0, left_speed = -100, right_speed = -100)
 
         # 1.5초 지연
         time.sleep(1.5)
