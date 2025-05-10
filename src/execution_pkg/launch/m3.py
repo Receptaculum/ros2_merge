@@ -86,6 +86,12 @@ def generate_launch_description():
             executable='data_debugger',
             output='screen'
         ),
+                
+        Node(
+            package='debug_pkg', 
+            executable='lidar_debugger',
+            output='screen'
+        ),
         # debug_pkg <End>
 
         ###################################################
@@ -94,12 +100,6 @@ def generate_launch_description():
         Node(
             package='decision_making_pkg', 
             executable='motion_planner',
-            output='screen'
-        ),
-        
-        Node(
-            package='debug_pkg', 
-            executable='lidar_debugger',
             output='screen'
         ),
         # decision_making_pkg <End>
