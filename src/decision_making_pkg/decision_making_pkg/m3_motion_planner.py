@@ -31,14 +31,14 @@ PUB_TOPIC_NAME = "command_data"
 PERIOD = 0.1
 
 # 차량 범퍼 위치
-BUMPER_POSITION = [320, 462]
+BUMPER_POSITION = [334, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.38
-K_Angle_1 = 0.44
+K_Stanley_1 = 0.4
+K_Angle_1 = 0.25
 
-K_Stanley_2 = 0.38
-K_Angle_2 = 0.44
+K_Stanley_2 = 0.4
+K_Angle_2 = 0.27
 
 # 기준선
 BASE_LINE = 320
@@ -137,7 +137,7 @@ class motion_planner(Node):
 ######################################################################################################
 
 
-    # 제어 명령 전송 함수 (-128 ~ 127)
+    # 제어 명령 전송 함수
     def send_command(self, steer_angle:int, left_speed:int, right_speed:int):
         msg = MotionCommand()
 
@@ -170,7 +170,7 @@ class motion_planner(Node):
 
             # 조향각 계산
             steering_angle = heading_error + np.arctan(k_stanley * lateral_error / (vehicle_speed + 1e-6))*(180/np.pi)
-            return int(np.clip(steering_angle, -40, 40)) # 각도 제한 (-40~40)
+            return int(np.clip(steering_angle, -30, 30)) # 각도 제한 (-30~30)
 
 
     # 판단 로직 작성부
@@ -309,7 +309,7 @@ class motion_planner(Node):
         angle = self.calculate_steering_angle(target_point, car_center_point, 0, 120, 0, 2)
 
         # 후진 진행
-        self.send_command(steer_angle = angle, left_speed = -120, right_speed = -120)
+        self.send_command(steer_angle = angle, left_speed = -100, right_speed = -100)
 
         # LIDAR 양쪽에 장애물 감지시 정지
         if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
@@ -342,14 +342,14 @@ class motion_planner(Node):
         # 직진
         self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
 
-        # 5초 지연
+        # 2초 지연
         time.sleep(2)
 
         # 우회전
         self.send_command(steer_angle = 30, left_speed = 200, right_speed = 200)
 
         # 5초 지연
-        time.sleep(5.5)
+        time.sleep(5)
 
         # 직진
         self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
