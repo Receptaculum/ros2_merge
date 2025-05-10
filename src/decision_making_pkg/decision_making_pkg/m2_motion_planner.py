@@ -38,9 +38,6 @@ K_Angle_1 = 0.25
 K_Stanley_2 = 0.4
 K_Angle_2 = 0.27
 
-# 기준선
-BASE_LINE = 320
-
 # 디버그 모드
 DEBUG = False
 

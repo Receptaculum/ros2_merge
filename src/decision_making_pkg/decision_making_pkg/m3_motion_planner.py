@@ -30,18 +30,15 @@ PUB_TOPIC_NAME = "command_data"
 # 연산 주기 설정
 PERIOD = 0.1
 
-# 차량 범퍼 위치
+# 차량 범퍼 위치 (Unused)
 BUMPER_POSITION = [334, 462]
 
-# 보정 상수
+# 보정 상수 (Unused)
 K_Stanley_1 = 0.4
 K_Angle_1 = 0.25
 
 K_Stanley_2 = 0.4
 K_Angle_2 = 0.27
-
-# 기준선
-BASE_LINE = 320
 
 # 디버그 모드
 DEBUG = False
