@@ -5,6 +5,25 @@ import serial
 import os
 import time
 
+########################################################################
+
+# 사진 저장 경로
+DATA_PATH= os.path.dirname(os.path.realpath(__file__)) + '/img' 
+
+# 카메라 번호
+CAMERA_NUM = 0
+
+# Arduino 장치 주소
+SERIAL_PORT = "/dev/ttyACM0"
+
+# 조향 단계
+MAX_STEERING = 40
+
+# 조향 간격
+INTERVAL = 5
+
+########################################################################
+
 # Data Collector Class 추출본
 class Data_Collect:
     def __init__(self, path, cam_num, max_steering=7, image_width=640, image_height=480, keyboard_sensing_period=0.1):
@@ -37,9 +56,9 @@ class Data_Collect:
             self.left_speed = max(self.left_speed - 10, -250)
             self.right_speed = max(self.right_speed - 10, -250)
         elif keyboard.is_pressed('a'):
-            self.steering = max(self.steering - 5, -self.max_steering)
+            self.steering = max(self.steering - INTERVAL, -self.max_steering)
         elif keyboard.is_pressed('d'):
-            self.steering = min(self.steering + 5, self.max_steering)
+            self.steering = min(self.steering + INTERVAL, self.max_steering)
         elif keyboard.is_pressed('r'):
             self.steering = 0
             self.left_speed = 0
@@ -77,11 +96,6 @@ class Data_Collect:
 
 # Main
 def main():
-    DATA_PATH= os.path.dirname(os.path.realpath(__file__)) + '/img' 
-    CAMERA_NUM = 0
-    SERIAL_PORT = "/dev/ttyACM0"
-    MAX_STEERING = 40  # 사용자 정의 최대 조향 단계
-
     print(DATA_PATH)
 
     # 데이터 수집 객체 초기화
