@@ -29,7 +29,7 @@ NODE_NAME = "yolov8_for_crosswalk"
 TOPIC_NAME = "crosswalk_data"
 
 # 라벨 이름 (crosswalk)
-LABEL_NAME = ["cross_walk"]
+LABEL_NAME = ["crosswalk"]
 
 # 구독 토픽 이름
 SUB_TOPIC_NAME = "image_publisher"

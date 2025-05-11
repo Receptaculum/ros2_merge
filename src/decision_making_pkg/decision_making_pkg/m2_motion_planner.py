@@ -374,8 +374,10 @@ class motion_planner(Node):
             elif self.car_2 == True:
                 # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
-                    # 차선 변경
-                    return 2 
+                    # 면적 차이가 일정 수준 이상인 경우
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 20:
+                        # 차선 변경
+                        return 2 
                 
                 # 전방과 2차선에 장애물이 감지된 경우
                 elif self.lidar_data.data[1] == True and self.lidar_data.data[2] == True:
@@ -394,8 +396,10 @@ class motion_planner(Node):
             elif self.car_1 == True:
                 # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] < self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[0] == False:
-                    # 차선 변경
-                    return 2 
+                    # 면적 차이가 일정 수준 이상인 경우
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 20:
+                        # 차선 변경
+                        return 2 
 
                 # 전방과 1차선에 장애물이 감지된 경우
                 elif self.lidar_data.data[0] == True and self.lidar_data.data[2] == True:
