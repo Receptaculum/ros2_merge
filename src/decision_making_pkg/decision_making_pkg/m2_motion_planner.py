@@ -375,7 +375,7 @@ class motion_planner(Node):
                 # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
                     # 면적 차이가 일정 수준 이상인 경우
-                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 20:
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 15:
                         # 차선 변경
                         return 2 
                 
@@ -397,7 +397,7 @@ class motion_planner(Node):
                 # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] < self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[0] == False:
                     # 면적 차이가 일정 수준 이상인 경우
-                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 20:
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 15:
                         # 차선 변경
                         return 2 
 
