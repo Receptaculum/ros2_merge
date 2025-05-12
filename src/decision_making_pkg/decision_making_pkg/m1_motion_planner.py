@@ -142,8 +142,8 @@ class motion_planner(Node):
         # Croswalk 감지 여부 기록
         self.crosswalk_reg.append(len(self.yolo_data_cross.crosswalk) > 0)
         
-        # 5개로 Register 크기 제한
-        if len(self.crosswalk_reg) > 5:
+        # 10개로 Register 크기 제한
+        if len(self.crosswalk_reg) > 10:
             self.crosswalk_reg.pop(0)
 
         # self.get_logger().info(f"cross {self.crosswalk_reg}")
@@ -282,14 +282,14 @@ class motion_planner(Node):
 
         # 횡단보도 위치 기반 로직  - Start #####################################################################################
         
-        # 1차선에서 횡단보도가 연속 2번 감지되었을 경우
-        if len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 2:
+        # 1차선에서 횡단보도가 연속 5번 감지되었을 경우
+        if len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 5:
             # 횡단보도의 위치가 300 이상인 경우
             if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
                 return 2
 
-        # 2차선에서 횡단보도가 연속 3번 감지되었을 경우
-        elif len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 3:
+        # 2차선에서 횡단보도가 연속 5번 감지되었을 경우
+        elif len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 5:
             # 횡단보도의 위치가 300 이상인 경우
             if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
                 return 2
