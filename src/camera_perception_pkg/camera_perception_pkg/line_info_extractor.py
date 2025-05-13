@@ -10,10 +10,11 @@ from rclpy.qos import QoSHistoryPolicy
 from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
 
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import String
 from interfaces_pkg.msg import SegmentGroup
 
 import logging
+import numpy as np
 
 
 ## <Parameter> #######################################################################################
@@ -46,7 +47,7 @@ class LineDetector(Node):
         )
         
         self.subscriber = self.create_subscription(SegmentGroup, self.sub_topic, self.yolov8_detections_callback, self.qos_profile)
-        self.publisher = self.create_publisher(Float32MultiArray, self.pub_topic, self.qos_profile)
+        self.publisher = self.create_publisher(String, self.pub_topic, self.qos_profile)
     
         # 로깅 여부 설정
         if LOG == False: 
@@ -54,13 +55,24 @@ class LineDetector(Node):
 
 
     def yolov8_detections_callback(self, msg):
-        line = Float32MultiArray()
+        result = String()
+        processed_data = dict()
+        line_data = np.array(msg.line).reshape(-1, 2)
 
-        print(msg)
+        for k in range(0, 480, 30):
+            try:
+                processed_data[k] = len(line_data[(k < line_data[:, 1]) & (line_data[:, 1] <= k + 30)])
+            except:
+                processed_data[k] = 0
+
+        self.get_logger().info(f"ss: {max(processed_data, key=processed_data.get)}")
+        
+
+
         ###### 코드 작성 요구 #####
 
         # 결과 Publish
-        self.publisher.publish(line)
+        self.publisher.publish(result)
 
 
 def main(args=None):
