@@ -25,6 +25,7 @@ SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
 SUB_TOPIC_DEPTH = "depth_data"
 SUB_TOPIC_LIDAR_DISTANCE = "lidar_processed"
+SUB_TOPIC_LANE_BACKUP = "lane_data_backup"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -77,6 +78,7 @@ class motion_planner(Node):
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
         self.sub_lidar_distance = self.create_subscription(LaserScan, SUB_TOPIC_LIDAR_DISTANCE, self.update_lidar_distance, self.qos_sub)
+        self.sub_lane_backup = self.create_subscription(LaneData, SUB_TOPIC_LANE_BACKUP, self.update_lane_backup, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
@@ -92,6 +94,7 @@ class motion_planner(Node):
         self.yolo_data = None
         self.depth_data = None
         self.lidar_distance_data = None
+        self.lane_backup_data = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -109,6 +112,7 @@ class motion_planner(Node):
 
         # 카운트 저장소 선언
         self.cnt = 0
+        self.cnt_backup = 0
 
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
 
@@ -175,6 +179,11 @@ class motion_planner(Node):
 
     def update_lidar_distance(self, msg):
         self.lidar_distance_data = msg # lidar distance data
+
+#######################################################################
+
+    def update_lane_backup(self, msg):
+        self.lane_backup_data = msg # lane backup data
 
 ######################################################################################################
 
@@ -319,7 +328,7 @@ class motion_planner(Node):
     def init_mode(self) -> int:      
         # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
 
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
+        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.lane_backup_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
@@ -346,7 +355,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.depth_data != None}")
+            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.lane_backup_data != None}")
             return 0
 
 ########################################################################################
@@ -593,13 +602,37 @@ class motion_planner(Node):
     # State 4
     def back_up_mode(self) -> int:
         self.get_logger().info(f"back_up_mode : {self.lane_state}")
-        self.send_command(steer_angle = 0, left_speed = -100, right_speed = -100)
 
-        # 1.5초 지연
-        time.sleep(1.5)
+        # 차량 중심점
+        car_center_point = [640/2, 480] 
+        
+        # 1차선에 위치한 경우
+        if self.lane_state == 1:
+            target_point = [self.lane_backup_data.lane1_x, self.lane_backup_data.lane1_y]
 
-        # 주행 모드로 이동
-        return 1
+        # 2차선에 위치한 경우
+        else:
+            target_point = [self.lane_backup_data.lane2_x, self.lane_backup_data.lane2_y]
+
+        # 조향각 계산
+        angle = self.calculate_steering_angle(target_point, car_center_point, 0, 120, 0, 2)
+
+        # 데이터 전송
+        self.send_command(steer_angle = angle, left_speed = -100, right_speed = -100)
+
+        if self.cnt_backup > 100:
+            # 카운트 초기화
+            self.cnt_backup = 0
+
+            # 주행 모드로 이동
+            return 1
+        
+        else:
+            # 카운트 증가
+            self.cnt_backup += 1
+
+            # 현 상태 유지
+            return 4
 
 ########################################################################################
 
