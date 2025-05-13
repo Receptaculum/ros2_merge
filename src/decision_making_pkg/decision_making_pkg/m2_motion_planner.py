@@ -606,8 +606,8 @@ class motion_planner(Node):
         # 차량 중심점
         car_center_point = [640/2, 480] 
         
-        d1 = len(car_center_point[0] - self.lane_backup_data.lane1_x)
-        d2 = len(car_center_point[0] - self.lane_backup_data.lane2_x)
+        d1 = abs(car_center_point[0] - self.lane_backup_data.lane1_x)
+        d2 = abs(car_center_point[0] - self.lane_backup_data.lane2_x)
 
         # 1차선에 근접한 경우
         if d1 < d2:
