@@ -160,13 +160,13 @@ class yolov8(Node):
         for n, predict_val in enumerate(predict_box):
             name = predicted[0].names[int(predict_val.cls.item())].strip()
 
-            if  name == self.label_0.strip() and cnt_0 < 2:
-                msg.car.extend(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
-                cnt_0 += 1   
+            if  name == self.label_0.strip() and cnt_0 == 0:
+                msg.lane_1 = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()
+                cnt_0 += 1
             
             elif name == self.label_1.strip() and cnt_1 == 0:
-                msg.line = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()    
-                cnt_1 += 1         
+                msg.lane_2 = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()    
+                cnt_1 += 1       
 
                 # Polygon 형식
                 # self.msg_2.data = self.predicted[0].masks[n].xy[0].flatten().tolist() 
