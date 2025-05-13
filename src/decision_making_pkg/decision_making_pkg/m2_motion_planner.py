@@ -606,16 +606,21 @@ class motion_planner(Node):
         # 차량 중심점
         car_center_point = [640/2, 480] 
         
-        # 1차선에 위치한 경우
-        if self.lane_state == 1:
+        d1 = len(car_center_point[0] - self.lane_backup_data.lane1_x)
+        d2 = len(car_center_point[0] - self.lane_backup_data.lane2_x)
+
+        # 1차선에 근접한 경우
+        if d1 < d2:
+            self.lane_state = 1
             target_point = [self.lane_backup_data.lane1_x, self.lane_backup_data.lane1_y]
 
-        # 2차선에 위치한 경우
+        # 2차선에 근접한 경우
         else:
+            self.lane_state = 2
             target_point = [self.lane_backup_data.lane2_x, self.lane_backup_data.lane2_y]
 
         # 조향각 계산
-        angle = self.calculate_steering_angle(target_point, car_center_point, 0, 120, 0, 2)
+        angle = self.calculate_steering_angle(target_point, car_center_point, 0, 100, 0, 2)
 
         # 데이터 전송
         self.send_command(steer_angle = angle, left_speed = -100, right_speed = -100)
