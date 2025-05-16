@@ -69,7 +69,7 @@ class motion_planner(Node):
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
         self.sub_yolo_rear = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_REAR, self.update_yolo_rear_data, self.qos_sub)
-        self.sub_line = self.create_subscription(Float32MultiArray, SUB_TOPIC_LINE, self.update_line_data, self.qos_sub)
+        self.sub_line = self.create_subscription(String, SUB_TOPIC_LINE, self.update_line_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
 
         # Publisher 선언
