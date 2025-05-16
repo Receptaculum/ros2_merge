@@ -31,8 +31,6 @@ setup(
             'lane_info_extractor = camera_perception_pkg.lane_info_extractor:main',
             'line_info_extractor = camera_perception_pkg.line_info_extractor:main',
             'depth_extractor = camera_perception_pkg.depth_extractor:main',
-            'yolov8_backup = camera_perception_pkg.yolov8_backup:main',
-            'lane_info_extractor_backup = camera_perception_pkg.lane_info_extractor_backup:main',
         ],
     },
 )

@@ -49,17 +49,17 @@ def generate_launch_description():
         #    output='screen'
         #),
 
-        Node(
-            package='camera_perception_pkg', 
-            executable='lane_info_extractor_backup',
-            output='screen'
-        ),
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='lane_info_extractor_backup',
+        #    output='screen'
+        #),
 
-        Node(
-            package='camera_perception_pkg', 
-            executable='yolov8_backup',
-            output='screen'
-        ),
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='yolov8_backup',
+        #    output='screen'
+        #),
         # camera_perception_pkg <End>
         
         ###################################################
