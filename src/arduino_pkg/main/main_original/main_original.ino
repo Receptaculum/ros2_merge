@@ -18,8 +18,8 @@ const int resistance_most_left = 427;
 const int resistance_most_right = 349;
 
 // 조향 최대 단계 수 (한 쪽 기준)
-// 값: 7 --> 20 -> 15
-const int MAX_STEERING_STEP = 15;
+// 값: 7 --> 20 -> 15 -> 10
+const int MAX_STEERING_STEP = 10;
 
 // 제어 상태 변수
 int angle = 0, resistance = 0, mapped_resistance = 0;

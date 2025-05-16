@@ -27,14 +27,14 @@ PUB_TOPIC_NAME = "command_data"
 PERIOD = 0.1
 
 # 차량 범퍼 위치
-BUMPER_POSITION = [334, 462]
+BUMPER_POSITION = [314, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.4
-K_Angle_1 = 0.25
+K_Stanley_1 = 0.95
+K_Angle_1 = 0.065
 
-K_Stanley_2 = 0.4
-K_Angle_2 = 0.27
+K_Stanley_2 = 0.92
+K_Angle_2 = 0.2
 
 K_Stanley_1_Turn = K_Stanley_1 * 1
 K_Stanley_2_Turn = K_Stanley_2 * 1
@@ -45,8 +45,8 @@ K_Angle_2_Turn = K_Angle_2 * 1
 DEBUG = False
 
 # 기준 속도
-SPEED = 120
-SPEED_LANE_CHANGE = 120
+SPEED = 255
+SPEED_LANE_CHANGE = 255
 
 ######################################################################################################
 
@@ -142,8 +142,8 @@ class motion_planner(Node):
         # Croswalk 감지 여부 기록
         self.crosswalk_reg.append(len(self.yolo_data_cross.crosswalk) > 0)
         
-        # 10개로 Register 크기 제한
-        if len(self.crosswalk_reg) > 10:
+        # 15개로 Register 크기 제한
+        if len(self.crosswalk_reg) > 15:
             self.crosswalk_reg.pop(0)
 
         # self.get_logger().info(f"cross {self.crosswalk_reg}")
@@ -282,16 +282,16 @@ class motion_planner(Node):
 
         # 횡단보도 위치 기반 로직  - Start #####################################################################################
         
-        # 1차선에서 횡단보도가 연속 5번 감지되었을 경우
-        if len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 5:
-            # 횡단보도의 위치가 300 이상인 경우
-            if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+        # 1차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
+        if self.lane_state == 1 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
+            # 횡단보도의 위치가 350 이상인 경우
+            if 350 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
                 return 2
 
-        # 2차선에서 횡단보도가 연속 5번 감지되었을 경우
-        elif len(self.yolo_data_cross.crosswalk) > 0 and self.crosswalk_reg.count(True) >= 5:
-            # 횡단보도의 위치가 300 이상인 경우
-            if 300 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+        # 2차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
+        elif self.lane_state == 2 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
+            # 횡단보도의 위치가 350 이상인 경우
+            if 350 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
                 return 2
         
         # 횡단보도 위치 기반 로직  - End #######################################################################################
@@ -307,12 +307,12 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED-30) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-30 , right_speed = SPEED) 
+            if steer_angle < -25:
+                 self.send_command(steer_angle = steer_angle, left_speed = SPEED-25, right_speed = SPEED) 
+
+                
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
 
 
         # 2차선에 있을 경우, 속도 및 조향 설정
@@ -324,12 +324,12 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
             # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED-20) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-20, right_speed = SPEED) 
+            if steer_angle > 25:
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+            elif steer_angle <-25:  
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED-25, right_speed = SPEED) 
             else:
-               self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
 
         # 계속 주행
         return 1
