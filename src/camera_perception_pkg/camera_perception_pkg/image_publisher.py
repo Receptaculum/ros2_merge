@@ -18,8 +18,8 @@ import logging
 ## <Parameter> #######################################################################################
 
 # 영상 소스
-# FRAME_SRC = "/dev/video2"
-FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video.mp4"
+FRAME_SRC = "/dev/video2"
+#FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video.mp4"
 
 # 영상 크기 (가로, 세로)
 FRAME_SIZE = [640, 480]
@@ -35,6 +35,9 @@ PUBLISH_PERIOD = 0.03
 
 # 로깅 여부
 LOG = True
+
+# 카메라 밝기 설정
+BRIGHTNESS = 128
 
 ######################################################################################################
 
@@ -64,6 +67,7 @@ class image_publisher(Node):
         self.cap = cv2.VideoCapture(frame_src) # 영상 프레임 출력을 위한 Object 변수를 선언
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE[0]) # 영상 가로 길이 지정
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE[1]) # 영상 세로 길이 지정
+        self.cap.set(cv2.CAP_PROP_BRIGHTNESS, BRIGHTNESS)
 
         self.qos = QoSProfile( # QOS 설정
                 reliability=QoSReliabilityPolicy.RELIABLE,

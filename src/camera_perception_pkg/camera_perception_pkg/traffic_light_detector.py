@@ -110,16 +110,20 @@ def get_traffic_light_color(cv_image, xyxy, hsv_ranges):
         
     max_ratio = max(red_ratio, yellow_ratio, green_ratio)
 
-    if max_ratio == red_ratio:
+    if max_ratio < 0.01:  # 1% 이하일 경우 무시
+        return 'N'
+
+    elif max_ratio == red_ratio:
         return 'R'
         
-    if max_ratio == yellow_ratio:
+    elif max_ratio == yellow_ratio:
         return 'Y'
         
-    if max_ratio == green_ratio:
+    elif max_ratio == green_ratio:
         return 'G'
         
-    return 'N'
+    else:
+        return 'N'
 
 
 def main(args=None):
