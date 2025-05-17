@@ -33,7 +33,7 @@ LABEL_NAME = ["car", "line"]
 SUB_TOPIC_NAME = "image_publisher_rear"
 
 # PT 파일 이름 지정 (확장자 포함, 해당 실행 파일의 디렉터리는 이미 앞에 포함되어 있다는 점에 유념)
-PT_NAME = "lib/pt/best.0507.1720.pt"
+PT_NAME = "lib/pt/best.park.0517.0944.pt"
 
 # CV 처리 영상 출력 여부
 DEBUG = True
