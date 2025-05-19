@@ -27,16 +27,16 @@ LOG = True
 COUNT = 3
 
 # 각도 설정 (좌)
-START_ANGLE_L = -45  # 감지 각도 범위의 시작 값
-END_ANGLE_L = 45   # 감지 각도 범위의 끝 값
+START_ANGLE_L = -30  # 감지 각도 범위의 시작 값
+END_ANGLE_L = 5   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (좌)
 RANGE_MIN_L = 0.3  # 감지 거리 범위의 최소값 [m]
 RANGE_MAX_L = 1.0  # 감지 거리 범위의 최대값 [m]
 
 # 각도 설정 (우)
-START_ANGLE_R = 135  # 감지 각도 범위의 시작 값
-END_ANGLE_R = 225   # 감지 각도 범위의 끝 값
+START_ANGLE_R = 175  # 감지 각도 범위의 시작 값
+END_ANGLE_R = 210   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (우)
 RANGE_MIN_R = 0.3  # 감지 거리 범위의 최소값 [m]
@@ -48,7 +48,7 @@ END_ANGLE_C = -80   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (중앙)
 RANGE_MIN_C = 0.0  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX_C = 0.4  # 감지 거리 범위의 최대값 [m]
+RANGE_MAX_C = 0.8  # 감지 거리 범위의 최대값 [m]
 
 # 각도 설정 (중앙 좌측)
 START_ANGLE_C_L = -80  # 감지 각도 범위의 시작 값
@@ -56,7 +56,7 @@ END_ANGLE_C_L = -40   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (중앙 좌측)
 RANGE_MIN_C_L = 0.0  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX_C_L = 0.2  # 감지 거리 범위의 최대값 [m]
+RANGE_MAX_C_L = 0.3  # 감지 거리 범위의 최대값 [m]
 
 # 각도 설정 (중앙 우측)
 START_ANGLE_C_R = -140  # 감지 각도 범위의 시작 값
@@ -64,7 +64,7 @@ END_ANGLE_C_R = -100   # 감지 각도 범위의 끝 값
         
 # 범위 설정 (중앙 우측)
 RANGE_MIN_C_R = 0.0  # 감지 거리 범위의 최소값 [m]
-RANGE_MAX_C_R = 0.2  # 감지 거리 범위의 최대값 [m]
+RANGE_MAX_C_R = 0.3  # 감지 거리 범위의 최대값 [m]
 
 
 # 영역 내의 점 카운트 상한

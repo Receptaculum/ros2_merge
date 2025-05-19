@@ -25,6 +25,7 @@ SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
 SUB_TOPIC_DEPTH = "depth_data"
 SUB_TOPIC_LIDAR_DISTANCE = "lidar_processed"
+SUB_TOPIC_YOLO_FOR_CROSSWALK = "crosswalk_data"
 
 # 발행 토픽 이름
 PUB_TOPIC_NAME = "command_data"
@@ -33,21 +34,27 @@ PUB_TOPIC_NAME = "command_data"
 PERIOD = 0.1
 
 # 차량 범퍼 위치
-BUMPER_POSITION = [334, 462]
+BUMPER_POSITION = [308, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.4
-K_Angle_1 = 0.25
+K_Stanley_1 = 0.65
+K_Angle_1 = 0.01
 
-K_Stanley_2 = 0.4
-K_Angle_2 = 0.27
+K_Stanley_2 = 0.65
+K_Angle_2 = 0.01
 
 # 디버그 모드
 DEBUG = False
 
 # 기준 속도
-SPEED = 120
-SPEED_LANE_CHANGE = 150 
+SPEED = 180
+SPEED_LANE_CHANGE = 180
+
+# 물체 접근시 후진 발동 거리
+BACK_UP_DISTANCE = 0.3
+
+# Lane Change Mode 유지 사이클
+MAINTAIN_LANE_CHANGE = 10
 
 ######################################################################################################
 
@@ -77,6 +84,7 @@ class motion_planner(Node):
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
         self.sub_lidar_distance = self.create_subscription(LaserScan, SUB_TOPIC_LIDAR_DISTANCE, self.update_lidar_distance, self.qos_sub)
+        self.sub_yolo_for_crosswalk = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_FOR_CROSSWALK, self.update_yolo_data_cross, self.qos_sub)
 
         # Publisher 선언
         self.command_publisher = self.create_publisher(MotionCommand, PUB_TOPIC_NAME, self.qos_pub)
@@ -92,6 +100,7 @@ class motion_planner(Node):
         self.yolo_data = None
         self.depth_data = None
         self.lidar_distance_data = None
+        self.yolo_data_cross = None
 
         # State 저장 레지스터 선언 (0, 1, 2, 3) | 0은 초기화 상태를 의미함
         self.state = 0
@@ -106,9 +115,11 @@ class motion_planner(Node):
         self.steer_angle_reg = 0 # send_command 함수에서 사용
         self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
+        self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
 
         # 카운트 저장소 선언
         self.cnt = 0
+        self.cnt_for_stop = 0
 
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
 
@@ -176,6 +187,18 @@ class motion_planner(Node):
     def update_lidar_distance(self, msg):
         self.lidar_distance_data = msg # lidar distance data
 
+#######################################################################
+   
+    def update_yolo_data_cross(self, msg):
+        self.yolo_data_cross = msg
+
+        # Croswalk 감지 여부 기록
+        self.crosswalk_reg.append(len(self.yolo_data_cross.crosswalk) > 0)
+        
+        # 15개로 Register 크기 제한
+        if len(self.crosswalk_reg) > 15:
+            self.crosswalk_reg.pop(0)
+
 ######################################################################################################
 
 
@@ -242,6 +265,7 @@ class motion_planner(Node):
             # Lane 1이 보이지 않을 경우
             except:
                 x_1 = 0
+                y_1_min = 0
 
             # Lane 2 
             try:
@@ -260,6 +284,7 @@ class motion_planner(Node):
 
                 else:
                     x_2 = 640
+                    y_2_min = 0
 
             # Lane 2가 보이지 않을 경우
             except:
@@ -273,15 +298,44 @@ class motion_planner(Node):
 
                 # 2차선에 위치한 경우
                 if d1 > d2:
-                    car_2 = True
-                    car_location_data.append(2)
-                
+
+                    # 차량이 인식된 차선 면적보다 위에 있는 경우
+                    if y <= y_2_min:
+                        car_2 = True
+                        car_location_data.append(2)
+
+                    # 차량이 인식된 차선 면적보다 아래에 있는 경우 + 차선이 인식되지 않은 경우
+                    else:
+                        # 차량이 1차선으로 판명되는 경우
+                        if x < 320/2:
+                            car_1 = True
+                            car_location_data.append(1)   
+                        # 차량이 2차선으로 판명되는 경우
+                        else:
+                            car_2 = True
+                            car_location_data.append(2)                            
+
+        
                 # 1차선에 위치한 경우
                 elif d1 < d2:
-                    car_1 = True
-                    car_location_data.append(1)
 
-            #self.get_logger().info(f"detect: {car_1} {car_2}")
+                    # 차량이 인식된 차선 면적보다 위에 있는 경우
+                    if y <= y_1_min:
+                        car_1 = True
+                        car_location_data.append(1)
+                    
+                    # 차량이 인식된 차선 면적보다 아래에 있는 경우  + 차선이 인식되지 않은 경우
+                    else:
+                        # 차량이 1차선으로 판명되는 경우
+                        if x < 320/2:
+                            car_1 = True
+                            car_location_data.append(1)
+                        # 차량이 2차선으로 판명되는 경우
+                        else:
+                            car_2 = True
+                            car_location_data.append(2)   
+
+            self.get_logger().info(f"detect: {car_1} {car_2}")
 
             return car_1, car_2, car_location_data
 
@@ -319,7 +373,7 @@ class motion_planner(Node):
     def init_mode(self) -> int:      
         # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
 
-        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
+        if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.yolo_data_cross != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
@@ -346,7 +400,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}")
+            self.get_logger().warn(f"{self.car_data != None}, {self.lane_data != None}, {self.traffic_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.yolo_data_cross != None}")
             return 0
 
 ########################################################################################
@@ -375,7 +429,7 @@ class motion_planner(Node):
                 # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
                     # 면적 차이가 일정 수준 이상인 경우
-                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 15:
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
                         # 차선 변경
                         return 2 
                 
@@ -397,7 +451,7 @@ class motion_planner(Node):
                 # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
                 if self.car_data.area[self.car_location_data.index(1)] < self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[0] == False:
                     # 면적 차이가 일정 수준 이상인 경우
-                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 15:
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
                         # 차선 변경
                         return 2 
 
@@ -471,8 +525,12 @@ class motion_planner(Node):
 
         # 신호등이 빨간색인 경우
         if self.traffic_data.data == "R":
-            # 신호등의 위치가 150 이하 및 빨간색이 3번 연속 검출된 경우
-            if np.array(self.yolo_data.traffic_light).reshape(-1, 2)[:, 1].max() < 150 and self.traffic_reg.count("R") >= 3:
+            # 1차선에서 횡단보도의 위치가 420 이상 및 빨간색이 3번 연속 검출된 경우
+            if self.lane_state == 1 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 420 and self.traffic_reg.count("R") >= 3:
+                return 3
+   
+            # 2차선에서 횡단보도의 위치가 430 이상 및 빨간색이 3번 연속 검출된 경우
+            elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 430 and self.traffic_reg.count("R") >= 3:
                 return 3
             # 그외의 경우
             else:
@@ -489,12 +547,7 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED-30) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-30, right_speed = SPEED) 
-            else:
-               self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+            self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
 
 
 
@@ -507,12 +560,7 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
             # Differential 구현
-            if steer_angle > 20:
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED-20) 
-            elif steer_angle <-20:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-20, right_speed = SPEED) 
-            else:
-               self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+            self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
 
         # 계속 주행
         return 1
@@ -527,15 +575,15 @@ class motion_planner(Node):
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
                                                         vehicle_speed = SPEED_LANE_CHANGE,
-                                                        path_slope=self.lane_data.slope1 * 1.2,
+                                                        path_slope=self.lane_data.slope1,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
             
-            # Driving Mode로의 변동 조건 (Count 20 이상)
-            if self.cnt > 1:
+            # Driving Mode로의 변동 조건
+            if self.cnt > MAINTAIN_LANE_CHANGE:
                 self.lane_state = 1
                 self.cnt = 0
                 return 1
@@ -547,15 +595,15 @@ class motion_planner(Node):
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
                                                         vehicle_speed = SPEED_LANE_CHANGE,
-                                                        path_slope=self.lane_data.slope2 * 1.2,
+                                                        path_slope=self.lane_data.slope2,
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
 
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
             
-            # Driving Mode로의 변동 조건 (Count 20 이상)
-            if self.cnt > 1:
+            # Driving Mode로의 변동 조건
+            if self.cnt > MAINTAIN_LANE_CHANGE:
                 self.lane_state = 2
                 self.cnt = 0
                 return 1
@@ -574,18 +622,36 @@ class motion_planner(Node):
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
         # 전방 물체가 접근할 경우 또는 전방 물체와 너무 근접한 경우
-        if self.lidar_distance_data.ranges[-90] < 1:
+        if self.lidar_distance_data.ranges[-90] < BACK_UP_DISTANCE:
+
+            # 카운트 초기화
+            self.cnt_for_stop = 0
+
             # 후진
             return 4
 
-        # 신호등이 빨간색이 아닐 경우
-        if self.traffic_data.data != "R":
-                
-                # 전방 장애물이 제거된 경우
-                if self.lidar_data.data[2] == False:
-                    return 1   
+        # 신호등이 빨간색이 아닌 경우 + 전방 장애물이 제거된 경우
+        if self.traffic_data.data != "R" and self.lidar_data.data[2] == False:
+            
+            # 카운트 초기화
+            self.cnt_for_stop = 0
 
-        # 신호등이 빨간색일 경우 또는 주행 방해 요건이 있는 경우 
+            # 주행
+            return 1   
+
+        # 장시간 정지 상태가 지속될 경우 + 신호등과 횡단보도가 감지되지 않은 경우
+        if self.cnt_for_stop > 50 and len(self.yolo_data.traffic_light) == 0 and len(self.yolo_data_cross.crosswalk) == 0:
+
+            # 카운트 초기화
+            self.cnt_for_stop = 0
+
+            # 후진
+            return 4
+
+        # 카운트 증가
+        self.cnt_for_stop += 1       
+
+        # 상태 유지
         return 3
 
 ########################################################################################
@@ -600,8 +666,8 @@ class motion_planner(Node):
         # 시간 지연
         time.sleep(1.5)
 
-        # 주행 모드로 이동
-        return 1
+        # 정지 모드로 이동
+        return 3
 
 
 ########################################################################################

@@ -30,15 +30,8 @@ PUB_TOPIC_NAME = "command_data"
 # 연산 주기 설정
 PERIOD = 0.1
 
-# 차량 범퍼 위치 (Unused)
-BUMPER_POSITION = [334, 462]
-
-# 보정 상수 (Unused)
-K_Stanley_1 = 0.4
-K_Angle_1 = 0.25
-
-K_Stanley_2 = 0.4
-K_Angle_2 = 0.27
+# 차량 후방 중심점 위치
+BUMPER_POSITION = [320, 462]
 
 # 디버그 모드
 DEBUG = False
@@ -253,7 +246,7 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 100, right_speed = 70)
+        self.send_command(steer_angle = -30, left_speed = 30, right_speed = 100)
 
         # 2개의 차량이 시야에 감지된 경우
         if len(self.car_rear_data.x) == 2:
@@ -282,7 +275,7 @@ class motion_planner(Node):
     # State 4
     def back_up_mode(self) -> int:
         self.get_logger().info(f"back_up_mode")
-        car_center_point = [640/2, 480]   
+
 
         # 2개의 차량이 감지된 경우
         if len(self.car_rear_data.x) == 2:
@@ -303,10 +296,10 @@ class motion_planner(Node):
             target_point = [640/2, None]
 
         # 조향각 계산
-        angle = self.calculate_steering_angle(target_point, car_center_point, 0, 120, 0, 2)
+        angle = self.calculate_steering_angle(target_point, BUMPER_POSITION , 0, 50, 0, 0.3)
 
         # 후진 진행
-        self.send_command(steer_angle = angle, left_speed = -100, right_speed = -100)
+        self.send_command(steer_angle = angle, left_speed = -25, right_speed = -25)
 
         # LIDAR 양쪽에 장애물 감지시 정지
         if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
