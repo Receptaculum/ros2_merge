@@ -622,7 +622,7 @@ class motion_planner(Node):
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
         # 전방 물체가 접근할 경우 또는 전방 물체와 너무 근접한 경우
-        if self.lidar_distance_data.ranges[-90] < BACK_UP_DISTANCE:
+        if min(self.lidar_distance_data.ranges[-95:-85]) < BACK_UP_DISTANCE:
 
             # 카운트 초기화
             self.cnt_for_stop = 0
