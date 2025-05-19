@@ -284,11 +284,11 @@ class motion_planner(Node):
 
                 else:
                     x_2 = 640
-                    y_2_min = 0
 
             # Lane 2가 보이지 않을 경우
             except:
-                x_2 = 640        
+                x_2 = 640
+                y_2_min = 0
 
             
             for x, y in list(zip(self.car_data.x, self.car_data.y)):
