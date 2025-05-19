@@ -17,10 +17,10 @@ CAMERA_NUM = 0
 SERIAL_PORT = "/dev/ttyACM0"
 
 # 조향 단계
-MAX_STEERING = 40
+MAX_STEERING = 10
 
 # 조향 간격
-INTERVAL = 5
+INTERVAL = 1
 
 ########################################################################
 
