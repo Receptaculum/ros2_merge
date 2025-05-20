@@ -9,6 +9,7 @@ from interfaces_pkg.msg import SegmentGroup
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import torch
+import numpy as np
 from ultralytics import YOLO
 
 import cv2
@@ -154,6 +155,10 @@ class yolov8(Node):
 
         self.get_logger().info(f"{len(predict_box.conf.tolist())} object(s) detected | value = {predict_box.conf.tolist()}")
 
+        # Line 데이터 처리를 위한 레지스터 선언
+        area = []
+        line_data = []
+
         # Box : 상자 / Keypoint : 관절 표현 / Mask : 영역 표시
         for n, predict_val in enumerate(predict_box):
             name = predicted[0].names[int(predict_val.cls.item())].strip()
@@ -162,8 +167,9 @@ class yolov8(Node):
                 msg.car.extend(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
                 cnt_0 += 1   
             
-            elif name == self.label_1.strip() and cnt_1 == 0:
-                msg.line = torch.Tensor(predict_mask[n].xy[0]).to(torch.int16).flatten().tolist()    
+            elif name == self.label_1.strip():
+                area.append(predict_box[n].xywh[0][2]*predict_box[n].xywh[0][3])
+                line_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
                 cnt_1 += 1         
 
                 # Polygon 형식
@@ -172,8 +178,14 @@ class yolov8(Node):
                 # Box 형식
                 # self.msg_2.data = self.predicted[0].boxes[n].xyxy[0]       
 
-        self.publisher.publish(msg)      
+        try:
+            # 면적이 최대인 객체 추가
+            msg.line.extend(line_data[area.index(max(area))])
+        except:
+            # 선이 감지되지 않은 경우
+            pass
 
+        self.publisher.publish(msg)      
 
     def shutdown(self):
         cv2.destroyAllWindows() # CV 창 닫기

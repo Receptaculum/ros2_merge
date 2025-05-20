@@ -11,7 +11,7 @@ from rclpy.qos import QoSDurabilityPolicy
 from rclpy.qos import QoSReliabilityPolicy
 
 from std_msgs.msg import String
-from interfaces_pkg.msg import SegmentGroup
+from interfaces_pkg.msg import SegmentGroup, LineData
 
 import logging
 import numpy as np
@@ -27,6 +27,12 @@ PUB_TOPIC_NAME = "line_data_rear"
 
 # 로깅 여부
 LOG = True
+
+# CV 처리 영상 출력 여부
+DEBUG = True
+
+# 영상 크기
+FRAME_SIZE = [640, 480]
 
 ######################################################################################################
 
@@ -47,7 +53,7 @@ class LineDetector(Node):
         )
         
         self.subscriber = self.create_subscription(SegmentGroup, self.sub_topic, self.yolov8_detections_callback, self.qos_profile)
-        self.publisher = self.create_publisher(String, self.pub_topic, self.qos_profile)
+        self.publisher = self.create_publisher(LineData, self.pub_topic, self.qos_profile)
     
         # 로깅 여부 설정
         if LOG == False: 
@@ -55,21 +61,115 @@ class LineDetector(Node):
 
 
     def yolov8_detections_callback(self, msg):
-        result = String()
-        processed_data = dict()
-        line_data = np.array(msg.line).reshape(-1, 2)
+        # 메시지 선언
+        result = LineData()
 
-        for k in range(0, 480, 30):
-            try:
-                processed_data[k] = len(line_data[(k < line_data[:, 1]) & (line_data[:, 1] <= k + 30)])
-            except:
-                processed_data[k] = 0
+        # 빈 이미지 생성
+        img_base = np.zeros([FRAME_SIZE[1], FRAME_SIZE[0]]).astype(np.uint8)
+        img_hough = np.zeros([FRAME_SIZE[1], FRAME_SIZE[0]]).astype(np.uint8)
+        img_hough_post = np.zeros([FRAME_SIZE[1], FRAME_SIZE[0]]).astype(np.uint8)
 
-        self.get_logger().info(f"ss: {max(processed_data, key=processed_data.get)}")
+        # 점 데이터
+        point = np.array(msg.line).reshape(-1, 2).astype(np.int32)
+
+        # 점 데이터 연결 및 이미지에 투사
+        cv2.polylines(img_base, [point], isClosed=False, color=255, thickness=2)
+
+        # Hough 변환
+        lines = cv2.HoughLinesP(
+            img_base, rho=1, theta=np.pi/180, threshold=50, 
+            minLineLength=80, maxLineGap=100
+        )
+
+        # 분류 결과 저장 레지스터
+        line_l = []
+        line_r = []
+        line_c = []
+
+        # 거리 정보 및 각도 정보 저장 레지스터
+        d1 = []
+        d2 = []
+        grad = []
+
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                val = np.array([[x1, y1], [x2, y2]])
+
+                # y축 기준 내림차순 정렬
+                val = val[val[:, 1].argsort()[::-1]]            
+                
+                # 거리 및 각도 계산
+                d1.append(abs(val[0][0] - 0) + abs(val[0][1] - 480))
+                d2.append(abs(val[0][0] - 640) + abs(val[0][1] - 480))
+                grad.append(np.arctan(abs(y1 - y2)/abs(x1 - x2 + 1e-6)) * 180 / np.pi)
+
+                # 선 삽입
+                cv2.line(img_hough, (x1, y1), (x2, y2), 255, 1)
+
+            # 인덱스 추출
+            d1_idx = d1.index(min(d1))
+            d2_idx = d2.index(min(d2))
+            grad_idx = grad.index(min(grad))
+
+            if grad[grad_idx] < 10:
+                line_c.extend(lines[grad_idx][0])
+
+            if d1_idx == d2_idx:
+                pass
+
+            else:
+                if grad[d1_idx] > 20 and d1_idx != grad_idx:
+                    line_l.extend(lines[d1_idx][0])
+    
+                if grad[d2_idx] > 20 and d2_idx != grad_idx:
+                    line_r.extend(lines[d2_idx][0])
         
+        # 감지 결과 출력을 위한 String
+        detection = ""
+
+        if line_l != []:
+            x1, y1, x2, y2 = line_l
+            cv2.line(img_hough_post, (x1, y1), (x2, y2), 255, 1)
+            detection += "L"
+
+        if line_r != []:
+            x1, y1, x2, y2 = line_r
+            cv2.line(img_hough_post, (x1, y1), (x2, y2), 255, 1) 
+            detection += "R"
+
+        if line_c != []:
+            x1, y1, x2, y2 = line_c
+            cv2.line(img_hough_post, (x1, y1), (x2, y2), 255, 1) 
+            detection += "C"
 
 
-        ###### 코드 작성 요구 #####
+        # 글자 길이 확인
+        (_, h), _ = cv2.getTextSize(text = detection,
+                                    fontFace = cv2.FONT_HERSHEY_COMPLEX, 
+                                    fontScale=1,
+                                    thickness=1)
+
+        # 글자 삽입
+        cv2.putText(img = img_hough_post,
+                    text = detection,
+                    org=[5, 5+h],
+                    fontFace=cv2.FONT_HERSHEY_COMPLEX,
+                    fontScale=1,
+                    color=255,
+                    thickness=1)     
+
+        # 이미지 출력
+        if DEBUG ==  True:
+            img_concat = np.concatenate((img_base, img_hough, img_hough_post), axis=1)
+            img_concat = cv2.resize(img_concat, (1280, 320))
+            cv2.imshow("LINE", img_concat)
+            cv2.waitKey(1)
+
+        # 결과값 할당
+        result.left = list(map(int, line_l))
+        result.right = list(map(int, line_r))
+        result.center = list(map(int, line_c))
 
         # 결과 Publish
         self.publisher.publish(result)

@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LaneData.msg"
   "msg/BoolMultiArray.msg"
   "msg/MotionCommand.msg"
+  "msg/LineData.msg"
 )
 
 if(BUILD_TESTING)
