@@ -19,6 +19,7 @@ import logging
 
 # 영상 소스
 FRAME_SRC = "/dev/video4"
+#FRAME_SRC = "/home/user/ros2_merge/src/camera_perception_pkg/camera_perception_pkg/lib/test_video.mp4"
 
 # 영상 크기 (가로, 세로)
 FRAME_SIZE = [640, 480]
