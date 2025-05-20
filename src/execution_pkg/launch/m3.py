@@ -13,11 +13,11 @@ def generate_launch_description():
         ###################################################
         
         # camera_perception_pkg <Start>                 
-        Node(
-            package='camera_perception_pkg', 
-            executable='image_publisher',
-            output='screen'
-        ),       
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='image_publisher',
+        #    output='screen'
+        #),       
 
         Node(
             package='camera_perception_pkg', 
@@ -25,11 +25,11 @@ def generate_launch_description():
             output='screen'
         ),       
 
-        Node(
-            package='camera_perception_pkg', 
-            executable='yolov8',
-            output='screen'
-        ),
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='yolov8',
+        #    output='screen'
+        #),
 
         Node(
             package='camera_perception_pkg', 
@@ -37,11 +37,11 @@ def generate_launch_description():
             output='screen'
         ),
 
-        Node(
-            package='camera_perception_pkg', 
-            executable='car_info_extractor',
-            output='screen'
-        ),
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='car_info_extractor',
+        #    output='screen'
+        #),
         
         Node(
             package='camera_perception_pkg', 

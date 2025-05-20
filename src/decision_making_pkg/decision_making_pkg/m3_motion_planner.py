@@ -206,7 +206,7 @@ class motion_planner(Node):
 
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.depth_data != None:
         #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
-        if self.car_data != None and self.car_rear_data != None and self.lidar_data != None and self.yolo_data != None and self.yolo_rear_data != None and self.line_data != None:
+        if self.car_rear_data != None and self.lidar_data != None and self.yolo_rear_data != None and self.line_data != None:
 
             # 0의 지령값 설정
             self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
@@ -218,7 +218,7 @@ class motion_planner(Node):
         # 데이터가 전부 수신되지 않았을 경우, 오류 전송
         else:
             self.get_logger().warn("data is not yet accepted")
-            self.get_logger().warn(f"{self.car_data != None}, {self.car_rear_data != None}, {self.lidar_data != None}, {self.yolo_data != None}, {self.yolo_rear_data != None}, {self.line_data != None}")
+            self.get_logger().warn(f"{self.car_rear_data != None}, {self.lidar_data != None}, {self.yolo_rear_data != None}, {self.line_data != None}")
             return 0
 
 ########################################################################################
