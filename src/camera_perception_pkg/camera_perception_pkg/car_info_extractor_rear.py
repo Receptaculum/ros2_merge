@@ -79,6 +79,7 @@ class CarDetector(Node):
             car_data.x.append(car_center_x)
             car_data.y.append(car_center_y)
             car_data.area.append(car_area)
+            car_data.xyxy.extend([x1, y1, x2, y2])
 
         # 결과 Publish
         self.get_logger().info(f"x = {car_data.x} | y = {car_data.y}")

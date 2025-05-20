@@ -78,7 +78,7 @@ class LineDetector(Node):
         # Hough 변환
         lines = cv2.HoughLinesP(
             img_base, rho=1, theta=np.pi/180, threshold=50, 
-            minLineLength=80, maxLineGap=100
+            minLineLength=75, maxLineGap=100
         )
 
         # 분류 결과 저장 레지스터
@@ -127,6 +127,27 @@ class LineDetector(Node):
         
         # 감지 결과 출력을 위한 String
         detection = ""
+
+        # 좌우 차선의 길이를 평준화하기 위한 조건
+        if line_l != [] and line_r != []:
+            x1_l, y1_l, x2_l, y2_l = line_l
+            x1_r, y1_r, x2_r, y2_r = line_r
+
+            y_max = max(y1_l, y2_l, y1_r, y2_r)
+            y_min = min(y1_l, y2_l, y1_r, y2_r)
+
+            grad_l = (x2_l - x1_l)/(y2_l - y1_l + 1e-6)
+            grad_r = (x2_r - x1_r)/(y2_r - y1_r + 1e-6)
+
+            new_x1_l = grad_l*(y_max - y1_l) + x1_l
+            new_x2_l = grad_l*(y_min - y1_l) + x1_l
+
+            new_x1_r = grad_r*(y_max - y1_r) + x1_r
+            new_x2_r = grad_r*(y_min - y1_r) + x1_r
+
+            line_l = [int(new_x1_l), y_max, int(new_x2_l), y_min]
+            line_r = [int(new_x1_r), y_max, int(new_x2_r), y_min]
+
 
         if line_l != []:
             x1, y1, x2, y2 = line_l

@@ -5,8 +5,8 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, MotionCommand, BoolMultiArray
-from std_msgs.msg import String, Bool, Int8MultiArray, Float32MultiArray
+from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, MotionCommand, BoolMultiArray, LineData
+from std_msgs.msg import String, Bool, Int8MultiArray
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 import numpy as np
@@ -62,7 +62,7 @@ class motion_planner(Node):
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
         self.sub_yolo_rear = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_REAR, self.update_yolo_rear_data, self.qos_sub)
-        self.sub_line = self.create_subscription(String, SUB_TOPIC_LINE, self.update_line_data, self.qos_sub)
+        self.sub_line = self.create_subscription(LineData, SUB_TOPIC_LINE, self.update_line_data, self.qos_sub)
         self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
 
         # Publisher 선언
@@ -250,7 +250,9 @@ class motion_planner(Node):
 
         # 2개의 차량이 시야에 감지된 경우
         if len(self.car_rear_data.x) == 2:
-            return 3
+            # 두 차량의 거리차가 일정 값 이상인 경우
+            if abs(self.car_rear_data.x[0] - self.car_rear_data.x[1]) > 100:
+                return 3
         
         # 현 상태 유지
         return 2
@@ -276,30 +278,72 @@ class motion_planner(Node):
     def back_up_mode(self) -> int:
         self.get_logger().info(f"back_up_mode")
 
+        # 좌우 차선이 감지된 경우
+        if len(self.line_data.left) !=0 and len(self.line_data.right) !=0:
+            self.get_logger().info(f"debug:1")
+            x1_l, y1_l, x2_l, y2_l = self.line_data.left
+            x1_r, y1_r, x2_r, y2_r = self.line_data.right
+
+            x_min = (x2_l + x2_r)/2
+            y_min = (y2_l + y2_r)/2
+
+            target_point = [x_min, y_min]
 
         # 2개의 차량이 감지된 경우
-        if len(self.car_rear_data.x) == 2:
+        elif len(self.car_rear_data.x) == 2:
+            self.get_logger().info(f"debug:2")
             target_point = [sum(self.car_rear_data.x)/2, sum(self.car_rear_data.y)/2]
 
         # 1개의 차량이 감지된 경우
         elif len(self.car_rear_data.x) == 1:
-            # 후방 좌측 차량만 감지될 경우
-            if self.car_rear_data.x[0] < 640/2:
-                target_point = [(self.car_rear_data.x[0] + 640)/2, None]
 
-            # 후방 우측 차량만 감지될 경우
-            elif self.car_rear_data.x[0] > 640/2:
-                target_point = [(self.car_rear_data.x[0] + 0)/2, None]
+            # 죄측 차선만 감지되고 차량이 우측에 있다고 추정될 경우
+            if len(self.line_data.left) != 0 and len(self.line_data.right) == 0 and self.car_rear_data.x[0] > BUMPER_POSITION[0]/2:
+                self.get_logger().info(f"debug:3")
+                x1_l, y1_l, x2_l, y2_l = self.line_data.left
 
-        # 차량이 감지되지 않은 경우
+                x_l = (x1_l + x2_l)/2
+                y_l = (y1_l + y2_l)/2
+
+                x_r = self.car_rear_data.x[0]
+                y_r = self.car_rear_data.y[0]
+
+                target_point = [(x_l + x_r)/2, (y_l + y_r)/2]
+        
+            # 우측 차선만 감지되고 차량이 좌측에 있다고 추정될 경우
+            if len(self.line_data.left) == 0 and len(self.line_data.right) != 0 and self.car_rear_data.x[0] < BUMPER_POSITION[0]/2:
+                self.get_logger().info(f"debug:4")
+                x1_r, y1_r, x2_r, y2_r = self.line_data.right
+
+                x_l = self.car_rear_data.x[0]
+                y_l = self.car_rear_data.y[0]
+
+                x_r = (x1_r + x2_r)/2
+                y_r = (y1_r + y2_r)/2
+
+                target_point = [(x_l + x_r)/2, (y_l + y_r)/2]
+
+        # 0개의 차량이 감지된 경우
         else:
-            target_point = [640/2, None]
+            self.get_logger().info(f"debug:5")
+            self.send_command(steer_angle = 0, left_speed = -120, right_speed = -120)
+
+            # LIDAR 양쪽에 장애물 감지시 정지
+            if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
+                return 5
+
+            # 현 상태 유지
+            return 4
+
 
         # 조향각 계산
-        angle = self.calculate_steering_angle(target_point, BUMPER_POSITION , 0, 50, 0, 0.3)
+        angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
+
+        # 각도 제한
+        angle = int(np.clip(angle, -20, 20))
 
         # 후진 진행
-        self.send_command(steer_angle = angle, left_speed = -25, right_speed = -25)
+        self.send_command(steer_angle = angle, left_speed = -120, right_speed = -120)
 
         # LIDAR 양쪽에 장애물 감지시 정지
         if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
