@@ -99,10 +99,10 @@ class LineDetector(Node):
                 # y축 기준 내림차순 정렬
                 val = val[val[:, 1].argsort()[::-1]]            
                 
-                # 거리 및 각도 계산
+                # 거리 및 각도 계산 (각도 : 양수-\ | 음수-/)
                 d1.append(abs(val[0][0] - 0) + abs(val[0][1] - 480))
                 d2.append(abs(val[0][0] - 640) + abs(val[0][1] - 480))
-                grad.append(np.arctan(abs(y1 - y2)/abs(x1 - x2 + 1e-6)) * 180 / np.pi)
+                grad.append(np.arctan((y1 - y2)/(x1 - x2 + 1e-6)) * 180 / np.pi)
 
                 # 선 삽입
                 cv2.line(img_hough, (x1, y1), (x2, y2), 255, 1)
@@ -110,21 +110,48 @@ class LineDetector(Node):
             # 인덱스 추출
             d1_idx = d1.index(min(d1))
             d2_idx = d2.index(min(d2))
-            grad_idx = grad.index(min(grad))
+            grad_idx = grad.index(min(grad, key=abs))
 
-            if grad[grad_idx] < 10:
+            # 가운데 선 추출
+            if abs(grad[grad_idx]) < 10:
                 line_c.extend(lines[grad_idx][0])
 
+            # 두 인덱스가 같을 경우 무시
             if d1_idx == d2_idx:
                 pass
 
             else:
-                if grad[d1_idx] > 20 and d1_idx != grad_idx:
-                    line_l.extend(lines[d1_idx][0])
+                # 두 인덱스에 대한 정보 추출
+                x1_l, y1_l, x2_l, y2_l = lines[d1_idx][0]
+                x1_r, y1_r, x2_r, y2_r = lines[d2_idx][0]
+
+                # 중앙점 계산
+                x_lc = (x1_l + x2_l)/2
+                y_lc = (y1_l + y2_l)/2                
+                x_rc = (x1_r + x2_r)/2
+                y_rc = (y1_r + y2_r)/2
+
+                # 두 선 사이의 이격 거리가 100 이상인 경우
+                if np.sqrt((x_lc-x_rc)**2 + (y_lc-y_rc)**2) > 100:
+
+                    # 좌측 차선 추출
+                    if grad[d1_idx] < -20 and d1_idx != grad_idx:
+                        line_l.extend(lines[d1_idx][0])
     
-                if grad[d2_idx] > 20 and d2_idx != grad_idx:
-                    line_r.extend(lines[d2_idx][0])
-        
+                    # 우측 차선 추출
+                    if grad[d2_idx] > 20 and d2_idx != grad_idx:
+                        line_r.extend(lines[d2_idx][0])
+
+                # 두 선 사이의 이격 거리가 너무 가까운 경우
+                else:
+                    # 좌측 차선인 경우
+                    if (grad[d1_idx] + grad[d2_idx])/2 < 0:
+                        line_l.extend(lines[d1_idx][0])
+
+                    # 우측 차선인 경우
+                    elif (grad[d1_idx] + grad[d2_idx])/2 > 0:
+                        line_r.extend(lines[d2_idx][0])
+
         # 감지 결과 출력을 위한 String
         detection = ""
 
