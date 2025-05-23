@@ -252,6 +252,11 @@ class motion_planner(Node):
         if len(self.car_rear_data.x) == 2:
             # 두 차량의 거리차가 일정 값 이상인 경우
             if abs(self.car_rear_data.x[0] - self.car_rear_data.x[1]) > 100:
+
+                # 일정 시간 지연
+                time.sleep(0.5)
+
+                # 다음 단계로 이동
                 return 3
         
         # 현 상태 유지
@@ -284,63 +289,141 @@ class motion_planner(Node):
             x1_l, y1_l, x2_l, y2_l = self.line_data.left
             x1_r, y1_r, x2_r, y2_r = self.line_data.right
 
+            x_max = (x1_l + x1_r)/2
+            y_max = (y1_l + y1_r)/2
+
             x_min = (x2_l + x2_r)/2
             y_min = (y2_l + y2_r)/2
 
-            target_point = [x_min, y_min]
+            if y_max < 200:
+                target_point = [x_min, y_min]
+
+            else:
+                target_point = [x_max, y_max]
+
+            # 두 차선의 거리가 일정 크기 이상인 경우
+            if abs(x1_l - x1_r) > 100:
+                # 조향각 계산
+                angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
 
         # 2개의 차량이 감지된 경우
-        elif len(self.car_rear_data.x) == 2:
+        if len(self.car_rear_data.x) == 2:
             self.get_logger().info(f"debug:2")
+
+            # 조향각 계산
             target_point = [sum(self.car_rear_data.x)/2, sum(self.car_rear_data.y)/2]
+            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
 
         # 1개의 차량이 감지된 경우
         elif len(self.car_rear_data.x) == 1:
 
-            # 죄측 차선만 감지되고 차량이 우측에 있다고 추정될 경우
+            # 좌측 차선만 감지되고 차량이 우측에 있다고 추정될 경우
             if len(self.line_data.left) != 0 and len(self.line_data.right) == 0 and self.car_rear_data.x[0] > BUMPER_POSITION[0]/2:
-                self.get_logger().info(f"debug:3")
+
+                # 좌측 차선 정보
                 x1_l, y1_l, x2_l, y2_l = self.line_data.left
 
                 x_l = (x1_l + x2_l)/2
                 y_l = (y1_l + y2_l)/2
 
-                x_r = self.car_rear_data.x[0]
-                y_r = self.car_rear_data.y[0]
+                # 우측 차량 정보                
+                x_r = min(self.car_rear_data.xyxy[0], self.car_rear_data.xyxy[2])
+                y_r = (self.car_rear_data.xyxy[1] + self.car_rear_data.xyxy[3])/2
 
-                target_point = [(x_l + x_r)/2, (y_l + y_r)/2]
-        
+                # 차선과 차량의 거리가 일정 수준 이상인 경우
+                if abs(x_l - x_r) >= 100:
+                    self.get_logger().info(f"debug:3")
+
+                    # 조향각 계산
+                    target_point = [(x_l + x_r)/2, (y_l + y_r)/2]        
+                    angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
+ 
+                # 차선-차량인 경우 (/ 편향)
+                elif x_l < x_r:
+                    self.get_logger().info(f"debug:4")
+
+                    # 최대 각도로 전진
+                    self.send_command(steer_angle = -40, left_speed = 100, right_speed = 100)
+                    
+                    # 1초 지연
+                    time.sleep(1)
+
+                    # 현 상태 유지
+                    return 4
+
             # 우측 차선만 감지되고 차량이 좌측에 있다고 추정될 경우
-            if len(self.line_data.left) == 0 and len(self.line_data.right) != 0 and self.car_rear_data.x[0] < BUMPER_POSITION[0]/2:
-                self.get_logger().info(f"debug:4")
-                x1_r, y1_r, x2_r, y2_r = self.line_data.right
+            elif len(self.line_data.left) == 0 and len(self.line_data.right) != 0 and self.car_rear_data.x[0] < BUMPER_POSITION[0]/2:
 
-                x_l = self.car_rear_data.x[0]
-                y_l = self.car_rear_data.y[0]
+                # 우측 차선 정보
+                x1_r, y1_r, x2_r, y2_r = self.line_data.right
 
                 x_r = (x1_r + x2_r)/2
                 y_r = (y1_r + y2_r)/2
 
-                target_point = [(x_l + x_r)/2, (y_l + y_r)/2]
+                # 좌측 차량 정보  
+                x_l = max(self.car_rear_data.xyxy[0], self.car_rear_data.xyxy[2])
+                y_l = (self.car_rear_data.xyxy[1] + self.car_rear_data.xyxy[3])/2
+
+                # 차선과 차량의 거리가 일정 수준 이상인 경우
+                if abs(x_l - x_r) >= 100:
+                    self.get_logger().info(f"debug:5")
+
+                    # 조향각 계산
+                    target_point = [(x_l + x_r)/2, (y_l + y_r)/2]        
+                    angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
+ 
+                # 차량-차선인 경우 (\ 편향)
+                else:
+                    self.get_logger().info(f"debug:6")
+
+                    # 최대 각도로 전진
+                    self.send_command(steer_angle = 40, left_speed = 100, right_speed = 100)
+                    
+                    # 1초 지연
+                    time.sleep(1)
+
+                    # 현 상태 유지
+                    return 4
+
+
+            # 차선이 1개만 검출된 경우
+            elif (len(self.line_data.left) != 0 and len(self.line_data.right) == 0) or (len(self.line_data.left) == 0 and len(self.line_data.right) != 0):
+
+                # 차선 변수 선언
+                if len(self.line_data.left) != 0:
+                    line_data = self.line_data.left
+                else:
+                    line_data = self.line_data.right
+
+                # 차선 정보 추출
+                x1_line, y1_line, x2_line, y2_line = line_data
+
+                x_line = (x1_line + x2_line)/2
+                y_line = (y1_line + y2_line)/2
+
+                # 차량 정보 추출
+                x_car = self.car_rear_data.x[0]
+                y_car = self.car_rear_data.y[0]
+
+                # 차량-차선인 경우 (\ 편향)
+                if x_car < x_line:
+                    angle = -40
+
+                # 차선-차량인 경우 (/ 편향)
+                elif x_car > x_line:
+                    angle = 40
+
+            else:
+                self.get_logger().info(f"debug:7")
+                angle = 0
 
         # 0개의 차량이 감지된 경우
         else:
-            self.get_logger().info(f"debug:5")
-            self.send_command(steer_angle = 0, left_speed = -120, right_speed = -120)
-
-            # LIDAR 양쪽에 장애물 감지시 정지
-            if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
-                return 5
-
-            # 현 상태 유지
-            return 4
-
-
-        # 조향각 계산
-        angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 0, 120, 0, 2)
+            self.get_logger().info(f"debug:8")
+            angle = 0
 
         # 각도 제한
-        angle = int(np.clip(angle, -20, 20))
+        angle = int(np.clip(angle, -40, 40))
 
         # 후진 진행
         self.send_command(steer_angle = angle, left_speed = -120, right_speed = -120)
