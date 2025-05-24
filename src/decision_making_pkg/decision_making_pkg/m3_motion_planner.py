@@ -152,8 +152,8 @@ class motion_planner(Node):
 
 
     # Pure Pursuit 기반 조향각 계산 함수
-    def calculate_steering_angle(self, target_point:list, car_center_point:list, lookahead_dist=20, car_width=8):
-        alpha = np.pi - np.arctan((target_point[1]-car_center_point[1])/(target_point[0]-car_center_point[0]+1e-6))
+    def calculate_steering_angle(self, target_point:list, car_center_point:list, lookahead_dist=20, car_width=1):
+        alpha = np.pi + np.arctan((target_point[1]-car_center_point[1])/(target_point[0]-car_center_point[0]+1e-6))
         angle = np.arctan(-2*car_width*np.sin(alpha)/lookahead_dist) * 180/np.pi
 
         return angle
@@ -241,7 +241,8 @@ class motion_planner(Node):
         
         # 우측 LIDAR에 사물이 감지된 경우
         if self.lidar_data.data[1] == True:
-            #
+            # 지연
+            time.sleep(2)
             return 2
 
 
@@ -255,22 +256,14 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 30, right_speed = 100)
+        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 100)
 
-        # 2개의 차량이 시야에 감지된 경우
-        if len(self.car_rear_data.x) == 2:
-            # 두 차량의 거리차가 일정 값 이상인 경우
-            if abs(self.car_rear_data.x[0] - self.car_rear_data.x[1]) > 100:
+        # 지연
+        time.sleep(8)
 
-                # 일정 시간 지연
-                time.sleep(0.5)
+        # 다음 단계로 이동
+        return 3
 
-                # 다음 단계로 이동
-                return 3
-        
-        # 현 상태 유지
-        return 2
-    
 ########################################################################################
 
     # State 3
@@ -314,13 +307,13 @@ class motion_planner(Node):
             y_spline = np.linspace(0, 640, 641)
             x_spline = splev(y_spline, spline_params)  
 
-            y_target = 450
-            x_target = x_spline[y_target]
+            y_target = 460
+            x_target = np.nan_to_num(x_spline[y_target])
 
             target_point = [x_target, y_target]
 
             # 조향각 계산
-            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 30)
+            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 10)
 
         # 2개의 차량이 감지된 경우
         elif len(self.car_rear_data.x) == 2:
@@ -328,9 +321,46 @@ class motion_planner(Node):
 
             # 조향각 계산
             target_point = [sum(self.car_rear_data.x)/2, sum(self.car_rear_data.y)/2]
-            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 60)
+            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 10)
 
-        # 그 외의 경우 (편향된 경우)
+        # 1개의 차량이 감지된 경우 + 차선이 1개 감지된 경우(L, R)
+        elif len(self.car_rear_data.x) == 1 and ((len(self.line_data.left) == 0 and len(self.line_data.right) != 0) or (len(self.line_data.left) != 0 and len(self.line_data.right) == 0)):
+            if len(self.line_data.left) != 0:
+                line = self.line_data.left
+            else:
+                line = self.line_data.right
+
+            # 선 좌표 추출
+            x1, y1, x2, y2 = line
+
+            x_line = (x1 + x2)/2
+            y_line = (y1 + y2)/2
+
+            # 차량 좌표 추출
+            x_car = self.car_rear_data.x[0]
+            y_car = self.car_rear_data.y[0]
+
+            # / 편향 
+            if x_line < x_car:
+                self.send_command(steer_angle = 30, left_speed = -20, right_speed = -20)
+
+                # 지연
+                time.sleep(3)
+
+                # 현 상태 유지
+                return 4
+
+            # \ 편향
+            else:
+                self.send_command(steer_angle = -30, left_speed = -20, right_speed = -20)
+
+                # 지연
+                time.sleep(3)
+
+                # 현 상태 유지
+                return 4
+
+        # 그 외의 경우
         else:
             self.get_logger().info(f"debug:none")
             angle = 0
@@ -339,7 +369,7 @@ class motion_planner(Node):
         angle = int(np.clip(angle, -30, 30))
 
         # 후진 진행
-        self.send_command(steer_angle = angle, left_speed = -100, right_speed = -100)
+        self.send_command(steer_angle = angle, left_speed = -30, right_speed = -30)
 
         # LIDAR 양쪽에 장애물 감지시 정지
         if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:

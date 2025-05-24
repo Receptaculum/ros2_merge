@@ -27,19 +27,19 @@ SIZE = [900, 900]
 MIN_L = 0.3 # 최소 거리 [m]
 MAX_L = 1.0 # 최대 거리 [m]
 MIN_ANGLE_L = -30 # 최소 각도
-MAX_ANGLE_L = 5 # 최대 각도
+MAX_ANGLE_L = -5 # 최대 각도
 
 # 우측
 MIN_R = 0.3 # 최소 거리 [m]
 MAX_R = 1.0 # 최대 거리 [m]
-MIN_ANGLE_R = 175 # 최소 각도
+MIN_ANGLE_R = 185 # 최소 각도
 MAX_ANGLE_R = 210 # 최대 각도
 
 # 중앙
 MIN_C = 0.0 # 최소 거리 [m]
-MAX_C = 0.8 # 최대 거리 [m]
-MIN_ANGLE_C = -140 # 최소 각도
-MAX_ANGLE_C = -40 # 최대 각도
+MAX_C = 1.0 # 최대 거리 [m]
+MIN_ANGLE_C = -90 # 최소 각도
+MAX_ANGLE_C = -90 # 최대 각도
 
 # 확장 계수
 K = 200

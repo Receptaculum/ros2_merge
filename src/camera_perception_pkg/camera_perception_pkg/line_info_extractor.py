@@ -78,7 +78,7 @@ class LineDetector(Node):
         # Hough 변환
         lines = cv2.HoughLinesP(
             img_base, rho=1, theta=np.pi/180, threshold=50, 
-            minLineLength=75, maxLineGap=100
+            minLineLength=50, maxLineGap=100
         )
 
         # 분류 결과 저장 레지스터

@@ -34,13 +34,13 @@ PUB_TOPIC_NAME = "command_data"
 PERIOD = 0.1
 
 # 차량 범퍼 위치
-BUMPER_POSITION = [308, 462]
+BUMPER_POSITION = [300, 462]
 
 # 보정 상수
-K_Stanley_1 = 0.65
+K_Stanley_1 = 0.35
 K_Angle_1 = 0.01
 
-K_Stanley_2 = 0.65
+K_Stanley_2 = 0.35
 K_Angle_2 = 0.01
 
 # 디버그 모드
@@ -58,11 +58,11 @@ SPEED_LANE2_CHANGE = 180
 BACK_UP_DISTANCE = 0.3
 
 # Lane Change Mode 유지 사이클
-MAINTAIN_LANE_CHANGE = 10
+MAINTAIN_LANE_CHANGE = 70
 
-Y_DISTANCE_THRESHOLD = 350  # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
-Y_DECREASE_COUNT = 10       # y 좌표가 지속적으로 감소한 횟수
-ALPHA_SPEED = 80            # speed 증가값 (1차선에서 정지 후 다시 출발할 때 속도 증가를 위해서 사용)
+Y_DISTANCE_THRESHOLD_MIN = 250 # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
+Y_DISTANCE_THRESHOLD_MAX = 260
+Y_DECREASE_COUNT = 20          # y 좌표가 지속적으로 감소한 횟수
 
 ######################################################################################################
 
@@ -421,7 +421,23 @@ class motion_planner(Node):
     def drive_mode(self) -> int:
         self.get_logger().info(f"drive_mode : {self.lane_state}")                               
 
-        ##### 면적 기반 논리 - Start #############################################################################################
+        # 신호등이 빨간색인 경우
+        if self.traffic_data.data == "R":
+            # 횡단보도가 감지된 경우
+            if len(self.yolo_data_cross.crosswalk) != 0:
+                # 1차선에서 횡단보도의 위치가 420 이상 및 빨간색이 3번 연속 검출된 경우
+                if self.lane_state == 1 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 420 and self.traffic_reg.count("R") >= 3:
+                    # 정지
+                    return 4
+    
+                # 2차선에서 횡단보도의 위치가 430 이상 및 빨간색이 3번 연속 검출된 경우
+                elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 430 and self.traffic_reg.count("R") >= 3:
+                    # 정지
+                    return 4
+                
+            # 그외의 경우
+            else:
+                pass
 
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
@@ -431,27 +447,11 @@ class motion_planner(Node):
                     return 2                 
 
          # 본인이 2차선에 있는 경우, 2차선에 차량이 존재
-        if self.car_2 and self.lane_state == 2:
+        if (len(self.yolo_data.car) != 0) and (not self.car_1) and (self.lane_state == 2):
             # 2차선 차량이 감지되고, LIDAR로 1차선 장애물이 감지되지 않은 경우
-            if self.car_2 == True and self.lidar_data.data[0] == False:
+            if self.lidar_data.data[0] == False:
                     # 차선 변경
                     return 2    
-   
-        # 신호등이 빨간색인 경우
-        if self.traffic_data.data == "R":
-            # 1차선에서 횡단보도의 위치가 420 이상 및 빨간색이 3번 연속 검출된 경우
-            if self.lane_state == 1 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 420 and self.traffic_reg.count("R") >= 3:
-                # 정지
-                return 4
-   
-            # 2차선에서 횡단보도의 위치가 430 이상 및 빨간색이 3번 연속 검출된 경우
-            elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 430 and self.traffic_reg.count("R") >= 3:
-                # 정지
-                return 4
-            
-            # 그외의 경우
-            else:
-                pass
 
         # 1차선에 있을 경우, 속도 및 조향 설정
         if self.lane_state == 1:
@@ -494,7 +494,7 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*3, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
             
             # Search Mode로의 변동 조건
             if self.cnt > MAINTAIN_LANE_CHANGE:
@@ -514,7 +514,7 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_2)
 
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE2_CHANGE, right_speed = SPEED_LANE2_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*3, -30, 30)), left_speed = SPEED_LANE2_CHANGE, right_speed = SPEED_LANE2_CHANGE) 
             
             # Driving Mode로의 변동 조건
             if self.cnt > MAINTAIN_LANE_CHANGE:
@@ -532,6 +532,8 @@ class motion_planner(Node):
 
     # State 3
     def search_mode(self) -> int:
+        self.get_logger().info(f"search_mode : {self.lane_state}")
+
         # 정지 명령 
         self.send_command(steer_angle=0, left_speed=0, right_speed=0)       
 
@@ -542,22 +544,30 @@ class motion_planner(Node):
 
             # y 좌표 히스토리 저장 (0.2초마다 y좌표를 추가)
             self.y_record_cnt += 1
-            if self.y_record_cnt % 2 == 0:
-                self.car1_y_history.append(car1_y)
+            self.car1_y_history.append(car1_y)
 
             if len(self.car1_y_history) > Y_DECREASE_COUNT:
                 self.car1_y_history.pop(0)
 
             # y 좌표가 감소 추세인지 확인
             if len(self.car1_y_history) == Y_DECREASE_COUNT:
-                decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
+                car_hist_post_process = []
+                self.get_logger().info(f"debug: {self.car1_y_history}")
 
-                if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
+                for k in range(0, Y_DECREASE_COUNT - 1, 4):
+                    car_hist_post_process.append(sum(self.car1_y_history[k:k+4])/4)
+
+                decreasing = all(car_hist_post_process[i] > car_hist_post_process[i + 1] for i in range(len(car_hist_post_process) - 1))
+
+                if decreasing and (Y_DISTANCE_THRESHOLD_MIN < self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD_MAX):
                     # y 좌표 히스토리 초기화
                     self.car1_y_history = []  
 
                     # drive_mode 진입
                     return 1  
+        
+        # 현 상태 유지
+        return 3
 
 ########################################################################################
 
@@ -566,16 +576,7 @@ class motion_planner(Node):
         self.get_logger().info(f"stop_mode : {self.lane_state}")
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
-        # 전방 물체가 접근할 경우 또는 전방 물체와 너무 근접한 경우
-        # if min(self.lidar_distance_data.ranges[-95:-85]) < BACK_UP_DISTANCE:
-
-        #     # 카운트 초기화
-        #     self.cnt_for_stop = 0
-
-        #     # 후진
-        #     return 4
-
-        # 신호등이 빨간색이 아닌 경우 + 전방 장애물이 제거된 경우
+        # 신호등이 빨간색이 아닌 경우
         if self.traffic_data.data != "R":
             
             # 카운트 초기화
@@ -583,15 +584,6 @@ class motion_planner(Node):
 
             # 주행
             return 1   
-
-        # # 장시간 정지 상태가 지속될 경우 + 신호등과 횡단보도가 감지되지 않은 경우
-        # if self.cnt_for_stop > 50 and len(self.yolo_data.traffic_light) == 0 and len(self.yolo_data_cross.crosswalk) == 0:
-
-        #     # 카운트 초기화
-        #     self.cnt_for_stop = 0
-
-        #     # 후진
-        #     return 4
 
         # 카운트 증가
         self.cnt_for_stop += 1       

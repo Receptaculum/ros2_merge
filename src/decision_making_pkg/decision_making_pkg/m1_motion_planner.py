@@ -171,6 +171,7 @@ class motion_planner(Node):
         if DEBUG == True:
             msg = MotionCommand()
 
+        #self.get_logger().info(f"angle:{steer_angle}")
         self.command_publisher.publish(msg)
 
 
@@ -201,10 +202,6 @@ class motion_planner(Node):
             # State 2 : lane_change_mode
             elif self.state == 2:
                 self.state = self.lane_change_mode()
-
-            # State 3 : stop_mode
-            elif self.state == 3:
-                self.state = self.stop_mode()
 
         except Exception as e:
             self.get_logger().warn(f"{e}")
@@ -284,14 +281,14 @@ class motion_planner(Node):
         
         # 1차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
         if self.lane_state == 1 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
-            # 횡단보도의 위치가 360 이상인 경우
-            if 360 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+            # 횡단보도의 위치가 365 이상인 경우 + 카운트가 일정 수준 이상인 경우
+            if 365 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() and self.cnt > 30:
                 return 2
 
         # 2차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
         elif self.lane_state == 2 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
-            # 횡단보도의 위치가 345 이상인 경우
-            if 345 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max():
+            # 횡단보도의 위치가 345 이상인 경우 + 카운트가 일정 수준 이상인 경우
+            if 345 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() and self.cnt > 30:
                 return 2
         
         # 횡단보도 위치 기반 로직  - End #######################################################################################
@@ -307,13 +304,12 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
-            if steer_angle < -15:
-                 self.send_command(steer_angle = steer_angle, left_speed = SPEED-40, right_speed = SPEED-20) 
-            elif steer_angle > 20:
-                 self.send_command(steer_angle = steer_angle, left_speed = SPEED-20, right_speed = SPEED-20) 
+            if steer_angle < -28:
+                self.send_command(steer_angle=steer_angle, left_speed = SPEED-45, right_speed = SPEED)
 
+            elif steer_angle < -26:
+                self.send_command(steer_angle=steer_angle, left_speed = SPEED-30, right_speed = SPEED)
 
-                
             else:
                 self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
 
@@ -330,9 +326,12 @@ class motion_planner(Node):
             if steer_angle > 25:
                 self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
             elif steer_angle <-25:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-25, right_speed = SPEED) 
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED-20, right_speed = SPEED) 
             else:
                 self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+
+        # 카운트 증가
+        self.cnt += 1
 
         # 계속 주행
         return 1
@@ -341,6 +340,9 @@ class motion_planner(Node):
 
     # State 2
     def lane_change_mode(self) -> int:
+        # 카운트 초기화
+        self.cnt = 0
+
         # 2차선에 위치해 있을 경우
         if self.lane_state == 2:
             self.get_logger().info(f"lane_change_mode : 2 -> 1")
@@ -354,12 +356,9 @@ class motion_planner(Node):
             # 조향 각도 제한 [좌:-30, 우:30]
             self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
             
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
-                self.lane_state = 1
-                self.cnt = 0
-                return 1
-            
+            # Driving Mode로 이동
+            self.lane_state = 1
+            return 1
 
         # 1차선에 위치해 있을 경우
         if self.lane_state == 1:
@@ -374,32 +373,9 @@ class motion_planner(Node):
             # 조향 각도 제한 [좌:-30, 우:30]
             self.send_command(steer_angle = int(np.clip(steer_angle, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
             
-            # Driving Mode로의 변동 조건 (Count 90 이상)
-            if self.cnt > 90:
-                self.lane_state = 2
-                self.cnt = 0
-                return 1
-
-        # 카운트 증가
-        self.cnt += 1
-
-        # 기존 상태 유지
-        return 2
-    
-########################################################################################
-
-    # State 3
-    def stop_mode(self) -> int:
-        self.get_logger().info(f"stop_mode : {self.lane_state}")
-        self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
-
-        # 신호등이 빨간색이 아닐 경우
-        if self.traffic_data.data != "R":
+            # Driving Mode로 이동
+            self.lane_state = 2
             return 1
-        
-        # 신호등이 빨간색일 경우
-        else:
-            return 3
 
 ########################################################################################
 
