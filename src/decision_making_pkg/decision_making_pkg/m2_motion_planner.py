@@ -367,13 +367,13 @@ class motion_planner(Node):
             elif self.state == 2:
                 self.state = self.lane_change_mode()
 
-            # State 3 : stop_mode
+            # State 3 : search_mode
             elif self.state == 3:
-                self.state = self.stop_mode()
+                self.state = self.search_mode()
 
-            # State 4 : back_up_mode
+            # State 4 : stop_mode
             elif self.state == 4:
-                self.state = self.back_up_mode()
+                self.state = self.stop_mode()
 
         except Exception as e:
             self.get_logger().warn(f"{e}")
@@ -423,11 +423,6 @@ class motion_planner(Node):
 
         ##### 면적 기반 논리 - Start #############################################################################################
 
-        # 전방에 장애물이 있을 경우
-        #if self.lidar_data.data[2] == True:
-            # 정지
-            #return 3   
-     
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
             # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
@@ -435,46 +430,28 @@ class motion_planner(Node):
                     # 차선 변경
                     return 2                 
 
-            # 2차선에 차량이 있는 경우
-            #elif self.car_2 == True:
-                # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
-                #if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
-                    # 면적 차이가 일정 수준 이상인 경우
-                    #if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
-                        # 차선 변경
-                       # return 2 
-                
-                # 전방과 2차선에 장애물이 감지된 경우
-                #elif self.lidar_data.data[1] == True and self.lidar_data.data[2] == True:
-                        # 정지
-                       #return 3
-                
-        ##### 한빈 수정 - Start ###############################################################################################
-        # 본인이 2차선에 있는 경우, 2차선에 차량이 존재
+         # 본인이 2차선에 있는 경우, 2차선에 차량이 존재
         if self.car_2 and self.lane_state == 2:
-            # 2차선 차량이 감지되고, LIDAR로 1차선 장애물이 감지되지 않은 경우 (조금 더 빠르게 바꾸기 위해서는 Left Lidar 거리를 줄이기)
+            # 2차선 차량이 감지되고, LIDAR로 1차선 장애물이 감지되지 않은 경우
             if self.car_2 == True and self.lidar_data.data[0] == False:
                     # 차선 변경
                     return 2    
    
-        ##### 한빈 수정 - End ###############################################################################################
-        
-
-
         # 신호등이 빨간색인 경우
         if self.traffic_data.data == "R":
             # 1차선에서 횡단보도의 위치가 420 이상 및 빨간색이 3번 연속 검출된 경우
             if self.lane_state == 1 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 420 and self.traffic_reg.count("R") >= 3:
-                return 3
+                # 정지
+                return 4
    
             # 2차선에서 횡단보도의 위치가 430 이상 및 빨간색이 3번 연속 검출된 경우
             elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 430 and self.traffic_reg.count("R") >= 3:
-                return 3
+                # 정지
+                return 4
+            
             # 그외의 경우
             else:
                 pass
-
-
 
         # 1차선에 있을 경우, 속도 및 조향 설정
         if self.lane_state == 1:
@@ -517,52 +494,14 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE-30, right_speed = SPEED_LANE1_CHANGE) 
-###한빈 수정#####################################################################################
-            # 2차선에서 1차선으로 변경 이후에 정지 명령
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
+            
+            # Search Mode로의 변동 조건
             if self.cnt > MAINTAIN_LANE_CHANGE:
                 self.lane_state = 1
                 self.cnt = 0
-                self.send_command(steer_angle=0, left_speed=0, right_speed=0)  # 정지 명령
-
-        
-                    # --- car1의 y 좌표 기록 --- 
-                    # #1차선 차량의 y 좌표를 기록하여 Car1이 전진상태로 판단 + 일정 거리 이상일 경우 
-                    # 기준 속도 SPEED = + alpha로 설정하여 증가시킨 후 drive_mode로 바꾸기기
-                if self.car_data is not None and self.car_1 == True:
-                    # 1차선 차량의 인덱스 구하기
-                    car1_index = self.car_location_data.index(1)
-                    car1_y = self.car_data.y[car1_index]
-
-                    # y 좌표 히스토리 저장
-                    #한빈 수정정
-                    #0.2초마다 y좌표를 추가.
-                    self.y_record_counter += 1
-                    if self.y_record_counter % 2 == 0:
-                        self.car1_y_history.append(car1_y)
-
-                    if len(self.car1_y_history) > Y_DECREASE_COUNT:
-                        self.car1_y_history.pop(0)
-
-                    # y 좌표가 감소 추세인지 확인
-                    if len(self.car1_y_history) == Y_DECREASE_COUNT:
-                        decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
-                        if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
-                            # y 좌표 히스토리 초기화
-                            self.car1_y_history = []  
-
-                            #SPEED를 ALPHA_SPEED 만큼 증가시켜서 drive_mode로 return하여 다시 주행 시작
-                            speed_boost = SPEED + ALPHA_SPEED
-                            self.send_command(steer_angle=0, left_speed=speed_boost, right_speed=speed_boost)
-                            # drive_mode 진입
-                            return 1  
-
-            # 카운트 증가
-            self.cnt += 1
-
-            #기존 상태 유지지
-            return 2 
-###한빈 수정#####################################################################################            
+                return 3
+            
 
         # 1차선에 위치해 있을 경우
         if self.lane_state == 1:
@@ -592,6 +531,37 @@ class motion_planner(Node):
 ########################################################################################
 
     # State 3
+    def search_mode(self) -> int:
+        # 정지 명령 
+        self.send_command(steer_angle=0, left_speed=0, right_speed=0)       
+
+        if self.car_data is not None and self.car_1 == True:
+            # 1차선 차량의 인덱스 구하기
+            car1_index = self.car_location_data.index(1)
+            car1_y = self.car_data.y[car1_index]
+
+            # y 좌표 히스토리 저장 (0.2초마다 y좌표를 추가)
+            self.y_record_cnt += 1
+            if self.y_record_cnt % 2 == 0:
+                self.car1_y_history.append(car1_y)
+
+            if len(self.car1_y_history) > Y_DECREASE_COUNT:
+                self.car1_y_history.pop(0)
+
+            # y 좌표가 감소 추세인지 확인
+            if len(self.car1_y_history) == Y_DECREASE_COUNT:
+                decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
+
+                if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
+                    # y 좌표 히스토리 초기화
+                    self.car1_y_history = []  
+
+                    # drive_mode 진입
+                    return 1  
+
+########################################################################################
+
+    # State 4
     def stop_mode(self) -> int:
         self.get_logger().info(f"stop_mode : {self.lane_state}")
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
@@ -627,23 +597,7 @@ class motion_planner(Node):
         self.cnt_for_stop += 1       
 
         # 상태 유지
-        return 3
-
-########################################################################################
-
-    # State 4
-    def back_up_mode(self) -> int:
-        self.get_logger().info(f"back_up_mode : {self.lane_state}")
-
-        # 데이터 전송
-        self.send_command(steer_angle = 0, left_speed = -100, right_speed = -100)
-
-        # 시간 지연
-        time.sleep(1.5)
-
-        # 정지 모드로 이동
-        return 3
-
+        return 4
 
 ########################################################################################
 
