@@ -47,22 +47,14 @@ K_Angle_2 = 0.01
 DEBUG = False
 
 # 기준 속도
-SPEED = 100
-
-#2차선에서 1차선으로
-SPEED_LANE1_CHANGE = 100
-#1차선에서 2차선으로
-SPEED_LANE2_CHANGE = 180
+SPEED = 180
+SPEED_LANE_CHANGE = 180
 
 # 물체 접근시 후진 발동 거리
 BACK_UP_DISTANCE = 0.3
 
 # Lane Change Mode 유지 사이클
 MAINTAIN_LANE_CHANGE = 10
-
-Y_DISTANCE_THRESHOLD = 350  # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
-Y_DECREASE_COUNT = 10       # y 좌표가 지속적으로 감소한 횟수
-ALPHA_SPEED = 80            # speed 증가값 (1차선에서 정지 후 다시 출발할 때 속도 증가를 위해서 사용)
 
 ######################################################################################################
 
@@ -124,15 +116,11 @@ class motion_planner(Node):
         self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
         self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
-        self.car1_y_history=[] # 전방 car1의 y 좌표 저장용 리스트트
 
         # 카운트 저장소 선언
         self.cnt = 0
         self.cnt_for_stop = 0
 
-        # y 좌표 기록 주기를 제어하기 위한 카운터
-        self.y_record_cnt = 0
-        
 ##### <변수 업데이트를 위한 함수 선언> #####################################################################
 
     def update_car_data(self, msg):
@@ -424,10 +412,11 @@ class motion_planner(Node):
         ##### 면적 기반 논리 - Start #############################################################################################
 
         # 전방에 장애물이 있을 경우
-        #if self.lidar_data.data[2] == True:
+        if self.lidar_data.data[2] == True:
             # 정지
-            #return 3   
-     
+            return 3   
+
+
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
             # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
@@ -436,29 +425,102 @@ class motion_planner(Node):
                     return 2                 
 
             # 2차선에 차량이 있는 경우
-            #elif self.car_2 == True:
+            elif self.car_2 == True:
                 # 2차선 차량의 면적이 1차선 차량보다 더 작은 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우
-                #if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
+                if self.car_data.area[self.car_location_data.index(1)] > self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[1] == False:
                     # 면적 차이가 일정 수준 이상인 경우
-                    #if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
                         # 차선 변경
-                       # return 2 
+                        return 2 
                 
                 # 전방과 2차선에 장애물이 감지된 경우
-                #elif self.lidar_data.data[1] == True and self.lidar_data.data[2] == True:
+                elif self.lidar_data.data[1] == True and self.lidar_data.data[2] == True:
                         # 정지
-                       #return 3
-                
-        ##### 한빈 수정 - Start ###############################################################################################
-        # 본인이 2차선에 있는 경우, 2차선에 차량이 존재
+                        return 3
+
+
+        # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
         if self.car_2 and self.lane_state == 2:
-            # 2차선 차량이 감지되고, LIDAR로 1차선 장애물이 감지되지 않은 경우 (조금 더 빠르게 바꾸기 위해서는 Left Lidar 거리를 줄이기)
-            if self.car_2 == True and self.lidar_data.data[0] == False:
+            # 1차선에 차량이 없고, LIDAR로 1차선 장애물이 감지되지 않은 경우
+            if self.car_1 == False and self.lidar_data.data[0] == False:
                     # 차선 변경
                     return 2    
-   
-        ##### 한빈 수정 - End ###############################################################################################
-        
+
+            # 1차선에 차량이 있는 경우
+            elif self.car_1 == True:
+                # 1차선 차량의 면적이 2차선 차량보다 더 작은 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
+                if self.car_data.area[self.car_location_data.index(1)] < self.car_data.area[self.car_location_data.index(2)] and self.lidar_data.data[0] == False:
+                    # 면적 차이가 일정 수준 이상인 경우
+                    if abs(self.car_data.area[self.car_location_data.index(1)] - self.car_data.area[self.car_location_data.index(2)]) > 10:
+                        # 차선 변경
+                        return 2 
+
+                # 전방과 1차선에 장애물이 감지된 경우
+                elif self.lidar_data.data[0] == True and self.lidar_data.data[2] == True:
+                        # 정지
+                        return 3     
+
+        ##### 면적 기반 논리 - End ###############################################################################################
+
+
+        ##### 깊이 기반 논리 - Start #############################################################################################
+        '''
+        # 전방에 장애물이 있을 경우
+        if self.lidar_data.data[2] == True:
+            # 정지
+            return 3   
+
+
+        # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
+        if self.car_1 and self.lane_state == 1:
+            # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
+            if self.car_2 == False and self.lidar_data.data[1] == False:
+                    self.get_logger().info("debug 1-1")
+
+                    # 차선 변경
+                    return 2                 
+
+            # 2차선에 차량이 있는 경우
+            elif self.car_2 == True:
+                # 1차선 차량이 2차선 차량보다 더 가까이 있는 경우 + LIDAR로 2차선 장애물이 감지되지 않은 경우 
+                if self.car_depth[self.car_location_data.index(1)] > self.car_depth[self.car_location_data.index(2)]:
+                    if self.lidar_data.data[1] == False:
+                        self.get_logger().info("debug 1-2")
+                        # 차선 변경
+                        return 2 
+                
+                # 전방 LIDAR가 감지된 경우 + LIDAR로 2차선 장애물이 감지된 경우 
+                if self.lidar_data.data[2] == True and self.lidar_data.data[1] == True:
+                    self.get_logger().info("debug 1-3")
+                    # 정지
+                    return 3
+
+
+        # 2차선에 차량이 존재하고, 본인이 2차선에 있는 경우
+        if self.car_2 and self.lane_state == 2:
+            # 1차선에 차량이 없고, LIDAR로 1차선 장애물이 감지되지 않은 경우
+            if self.car_1 == False and self.lidar_data.data[0] == False:
+                    self.get_logger().info("debug 2-1")
+
+                    # 차선 변경
+                    return 2    
+
+            # 1차선에 차량이 있는 경우
+            elif self.car_1 == True:
+                # 2차선 차량이 1차선 차량보다 더 가까이 있는 경우 + LIDAR로 1차선 장애물이 감지되지 않은 경우
+                if self.car_depth[self.car_location_data.index(1)] < self.car_depth[self.car_location_data.index(2)]:
+                    if self.lidar_data.data[0] == False:
+                        self.get_logger().info("debug 2-2")
+                        # 차선 변경
+                        return 2 
+
+                # 전방 LIDAR가 감지된 경우 + LIDAR로 1차선 장애물이 감지된 경우 
+                if self.lidar_data.data[2] == True and self.lidar_data.data[0] == True:
+                    self.get_logger().info("debug 2-3")
+                    # 정지
+                    return 3         
+        '''
+        ##### 깊이 기반 논리 - End ###############################################################################################
 
 
         # 신호등이 빨간색인 경우
@@ -504,6 +566,7 @@ class motion_planner(Node):
         return 1
 
 ########################################################################################
+
     # State 2
     def lane_change_mode(self) -> int:
         # 2차선에 위치해 있을 경우
@@ -511,67 +574,33 @@ class motion_planner(Node):
             self.get_logger().info(f"lane_change_mode : 2 -> 1")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = SPEED_LANE1_CHANGE,
+                                                        vehicle_speed = SPEED_LANE_CHANGE,
                                                         path_slope=self.lane_data.slope1,
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
-###한빈 수정#####################################################################################
-            # 2차선에서 1차선으로 변경 이후에 정지 명령
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
+            
+            # Driving Mode로의 변동 조건
             if self.cnt > MAINTAIN_LANE_CHANGE:
                 self.lane_state = 1
                 self.cnt = 0
-                self.send_command(steer_angle=0, left_speed=0, right_speed=0)  # 정지 명령
-
-        
-                # --- car1의 y 좌표 기록 --- 
-                # #1차선 차량의 y 좌표를 기록하여 Car1이 전진상태로 판단 + 일정 거리 이상일 경우 
-                # 기준 속도 SPEED = + alpha로 설정하여 증가시킨 후 drive_mode로 바꾸기기
-            if self.car_data is not None and 1 in self.car_location_data:
-                # 1차선 차량의 인덱스 구하기
-                car1_index = self.car_location_data.index(1)
-                car1_y = self.car_data.y[car1_index]
-
-                # y 좌표 히스토리 저장
-                #한빈 수정정
-                #0.2초마다 y좌표를 추가.
-                self.y_record_counter += 1
-                if self.y_record_counter % 2 == 0:
-                    self.car1_y_history.append(car1_y)
-
-                if len(self.car1_y_history) > Y_DECREASE_COUNT:
-                    self.car1_y_history.pop(0)
-
-                # y 좌표가 감소 추세인지 확인
-                if len(self.car1_y_history) == Y_DECREASE_COUNT:
-                    decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
-                    if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
-                        # y 좌표 히스토리 초기화
-                        self.car1_y_history = []  
-
-                        #SPEED를 ALPHA_SPEED 만큼 증가시켜서 drive_mode로 return하여 다시 주행 시작
-                        speed_boost = SPEED + ALPHA_SPEED
-                        self.send_command(steer_angle=0, left_speed=speed_boost, right_speed=speed_boost)
-                        # drive_mode 진입
-                        return 1  
-            #기존 상태 유지지
-            return 2 
-###한빈 수정#####################################################################################            
+                return 1
+            
 
         # 1차선에 위치해 있을 경우
         if self.lane_state == 1:
             self.get_logger().info(f"lane_change_mode : 1 -> 2")
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane2_x, self.lane_data.lane2_y],
                                                         car_center_point = BUMPER_POSITION, 
-                                                        vehicle_speed = SPEED_LANE2_CHANGE,
+                                                        vehicle_speed = SPEED_LANE_CHANGE,
                                                         path_slope=self.lane_data.slope2,
                                                         k_angle=K_Angle_2,
                                                         k_stanley=K_Stanley_2)
 
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE2_CHANGE, right_speed = SPEED_LANE2_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE_CHANGE, right_speed = SPEED_LANE_CHANGE) 
             
             # Driving Mode로의 변동 조건
             if self.cnt > MAINTAIN_LANE_CHANGE:
@@ -593,16 +622,16 @@ class motion_planner(Node):
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
         # 전방 물체가 접근할 경우 또는 전방 물체와 너무 근접한 경우
-        # if min(self.lidar_distance_data.ranges[-95:-85]) < BACK_UP_DISTANCE:
+        if min(self.lidar_distance_data.ranges[-95:-85]) < BACK_UP_DISTANCE:
 
-        #     # 카운트 초기화
-        #     self.cnt_for_stop = 0
+            # 카운트 초기화
+            self.cnt_for_stop = 0
 
-        #     # 후진
-        #     return 4
+            # 후진
+            return 4
 
         # 신호등이 빨간색이 아닌 경우 + 전방 장애물이 제거된 경우
-        if self.traffic_data.data != "R":
+        if self.traffic_data.data != "R" and self.lidar_data.data[2] == False:
             
             # 카운트 초기화
             self.cnt_for_stop = 0
@@ -610,14 +639,14 @@ class motion_planner(Node):
             # 주행
             return 1   
 
-        # # 장시간 정지 상태가 지속될 경우 + 신호등과 횡단보도가 감지되지 않은 경우
-        # if self.cnt_for_stop > 50 and len(self.yolo_data.traffic_light) == 0 and len(self.yolo_data_cross.crosswalk) == 0:
+        # 장시간 정지 상태가 지속될 경우 + 신호등과 횡단보도가 감지되지 않은 경우
+        if self.cnt_for_stop > 50 and len(self.yolo_data.traffic_light) == 0 and len(self.yolo_data_cross.crosswalk) == 0:
 
-        #     # 카운트 초기화
-        #     self.cnt_for_stop = 0
+            # 카운트 초기화
+            self.cnt_for_stop = 0
 
-        #     # 후진
-        #     return 4
+            # 후진
+            return 4
 
         # 카운트 증가
         self.cnt_for_stop += 1       

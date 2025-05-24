@@ -304,6 +304,8 @@ class motion_planner(Node):
             x_min = (x2_l + x2_r)/2
             y_min = (y2_l + y2_r)/2
 
+            y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])
+
             x_spline = np.array([x_max, x_min, BUMPER_POSITION[0]])[np.argsort(y_spline)]
             y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])[np.argsort(y_spline)]
 
