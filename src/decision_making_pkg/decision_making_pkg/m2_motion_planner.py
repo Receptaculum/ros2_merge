@@ -517,7 +517,7 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_1)
             
             # 조향 각도 제한 [좌:-30, 우:30]
-            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
+            self.send_command(steer_angle = int(np.clip(steer_angle*2, -30, 30)), left_speed = SPEED_LANE1_CHANGE-30, right_speed = SPEED_LANE1_CHANGE) 
 ###한빈 수정#####################################################################################
             # 2차선에서 1차선으로 변경 이후에 정지 명령
             if self.cnt > MAINTAIN_LANE_CHANGE:
@@ -526,36 +526,40 @@ class motion_planner(Node):
                 self.send_command(steer_angle=0, left_speed=0, right_speed=0)  # 정지 명령
 
         
-                # --- car1의 y 좌표 기록 --- 
-                # #1차선 차량의 y 좌표를 기록하여 Car1이 전진상태로 판단 + 일정 거리 이상일 경우 
-                # 기준 속도 SPEED = + alpha로 설정하여 증가시킨 후 drive_mode로 바꾸기기
-            if self.car_data is not None and 1 in self.car_location_data:
-                # 1차선 차량의 인덱스 구하기
-                car1_index = self.car_location_data.index(1)
-                car1_y = self.car_data.y[car1_index]
+                    # --- car1의 y 좌표 기록 --- 
+                    # #1차선 차량의 y 좌표를 기록하여 Car1이 전진상태로 판단 + 일정 거리 이상일 경우 
+                    # 기준 속도 SPEED = + alpha로 설정하여 증가시킨 후 drive_mode로 바꾸기기
+                if self.car_data is not None and self.car_1 == True:
+                    # 1차선 차량의 인덱스 구하기
+                    car1_index = self.car_location_data.index(1)
+                    car1_y = self.car_data.y[car1_index]
 
-                # y 좌표 히스토리 저장
-                #한빈 수정정
-                #0.2초마다 y좌표를 추가.
-                self.y_record_counter += 1
-                if self.y_record_counter % 2 == 0:
-                    self.car1_y_history.append(car1_y)
+                    # y 좌표 히스토리 저장
+                    #한빈 수정정
+                    #0.2초마다 y좌표를 추가.
+                    self.y_record_counter += 1
+                    if self.y_record_counter % 2 == 0:
+                        self.car1_y_history.append(car1_y)
 
-                if len(self.car1_y_history) > Y_DECREASE_COUNT:
-                    self.car1_y_history.pop(0)
+                    if len(self.car1_y_history) > Y_DECREASE_COUNT:
+                        self.car1_y_history.pop(0)
 
-                # y 좌표가 감소 추세인지 확인
-                if len(self.car1_y_history) == Y_DECREASE_COUNT:
-                    decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
-                    if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
-                        # y 좌표 히스토리 초기화
-                        self.car1_y_history = []  
+                    # y 좌표가 감소 추세인지 확인
+                    if len(self.car1_y_history) == Y_DECREASE_COUNT:
+                        decreasing = all(self.car1_y_history[i] > self.car1_y_history[i + 1] for i in range(Y_DECREASE_COUNT - 1))
+                        if decreasing and self.car1_y_history[-1] < Y_DISTANCE_THRESHOLD:
+                            # y 좌표 히스토리 초기화
+                            self.car1_y_history = []  
 
-                        #SPEED를 ALPHA_SPEED 만큼 증가시켜서 drive_mode로 return하여 다시 주행 시작
-                        speed_boost = SPEED + ALPHA_SPEED
-                        self.send_command(steer_angle=0, left_speed=speed_boost, right_speed=speed_boost)
-                        # drive_mode 진입
-                        return 1  
+                            #SPEED를 ALPHA_SPEED 만큼 증가시켜서 drive_mode로 return하여 다시 주행 시작
+                            speed_boost = SPEED + ALPHA_SPEED
+                            self.send_command(steer_angle=0, left_speed=speed_boost, right_speed=speed_boost)
+                            # drive_mode 진입
+                            return 1  
+
+            # 카운트 증가
+            self.cnt += 1
+
             #기존 상태 유지지
             return 2 
 ###한빈 수정#####################################################################################            
