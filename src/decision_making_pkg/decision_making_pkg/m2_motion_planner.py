@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from interfaces_pkg.msg import CarData, LaneData, SegmentGroup, BoolMultiArray, MotionCommand
-from std_msgs.msg import String, Bool, Int8MultiArray
+from std_msgs.msg import String
 from sensor_msgs.msg import LaserScan
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
@@ -23,7 +23,6 @@ SUB_TOPIC_LANE = "lane_data"
 SUB_TOPIC_TRAFFIC = "traffic_data"
 SUB_TOPIC_LIDAR = "lidar_data"
 SUB_TOPIC_YOLO = "segmented_data"
-SUB_TOPIC_DEPTH = "depth_data"
 SUB_TOPIC_LIDAR_DISTANCE = "lidar_processed"
 SUB_TOPIC_YOLO_FOR_CROSSWALK = "crosswalk_data"
 
@@ -90,7 +89,6 @@ class motion_planner(Node):
         self.sub_traffic = self.create_subscription(String, SUB_TOPIC_TRAFFIC, self.update_traffic_data, self.qos_sub)
         self.sub_lidar = self.create_subscription(BoolMultiArray, SUB_TOPIC_LIDAR, self.update_lidar_data, self.qos_sub)
         self.sub_yolo = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO, self.update_yolo_data, self.qos_sub)
-        self.sub_depth = self.create_subscription(Image, SUB_TOPIC_DEPTH, self.update_depth_data, self.qos_sub)
         self.sub_lidar_distance = self.create_subscription(LaserScan, SUB_TOPIC_LIDAR_DISTANCE, self.update_lidar_distance, self.qos_sub)
         self.sub_yolo_for_crosswalk = self.create_subscription(SegmentGroup, SUB_TOPIC_YOLO_FOR_CROSSWALK, self.update_yolo_data_cross, self.qos_sub)
 
@@ -106,7 +104,6 @@ class motion_planner(Node):
         self.traffic_data = None
         self.lidar_data = None
         self.yolo_data = None
-        self.depth_data = None
         self.lidar_distance_data = None
         self.yolo_data_cross = None
 
@@ -121,7 +118,6 @@ class motion_planner(Node):
 
         # 전송 데이터 기억
         self.steer_angle_reg = 0 # send_command 함수에서 사용
-        self.traffic_reg_yolo = [] # update_yolo_data 함수에서 사용
         self.traffic_reg = [] # update_traffic_data 함수에서 사용
         self.crosswalk_reg = [] # update_yolo_data 함수에서 사용
         self.car1_y_history=[] # 전방 car1의 y 좌표 저장용 리스트트
@@ -140,20 +136,6 @@ class motion_planner(Node):
 
         # 차량 존재 여부 업데이트
         self.car_1, self.car_2, self.car_location_data = self.extract_car_data()
-
-        # 깊이 추정을 위한 레지스터 선언
-        self.car_depth = []
-
-        # 깊이 추정
-        if self.depth_data != None and len(self.car_data.x) > 0:
-            frame = self.bridge.imgmsg_to_cv2(self.depth_data)
-
-            for x, y in list(zip(self.car_data.x, self.car_data.y)):
-                # 프레임 정규화
-                frame_norm = (frame - np.min(frame)) / (np.max(frame) - np.min(frame) + 1e-6)
-
-                # 레지스터에 추가
-                self.car_depth.append(frame_norm[int(y)][int(x)])
 
 #######################################################################
 
@@ -181,18 +163,6 @@ class motion_planner(Node):
 
     def update_yolo_data(self, msg):
         self.yolo_data = msg # segmentation data
-
-        # Traffic Light 감지 여부 기록
-        self.traffic_reg_yolo.append(len(self.yolo_data.traffic_light) > 0)
-        
-        # 10개로 Register 크기 제한
-        if len(self.traffic_reg_yolo) > 4:
-            self.traffic_reg_yolo.pop(0)
-
-#######################################################################
-
-    def update_depth_data(self, msg):
-        self.depth_data = msg # Depth Image
 
 #######################################################################
 
@@ -383,12 +353,9 @@ class motion_planner(Node):
 
     # State 0
     def init_mode(self) -> int:      
-        # 데이터가 전부 수신되었을 경우, 처리 시작 (1 : 전체 확인 | 2 : LIDAR 제외 | 3 : DEPTH 제외 | 4 : LIDAR & DEPTH 제외)
+        # 데이터가 전부 수신되었을 경우, 처리 시작
 
         if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None and self.yolo_data_cross != None:
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None and self.depth_data != None:
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.lidar_data != None and self.yolo_data != None:
-        #if self.car_data != None and self.lane_data != None and self.traffic_data != None and self.yolo_data != None:
 
             # 차량 위치 결정
             d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
@@ -439,6 +406,7 @@ class motion_planner(Node):
             else:
                 pass
 
+
         # 1차선에 차량이 존재하고, 본인이 1차선에 있는 경우
         if self.car_1 and self.lane_state == 1:
             # 2차선에 차량이 없고, LIDAR로 2차선 장애물이 감지되지 않은 경우
@@ -453,6 +421,7 @@ class motion_planner(Node):
                     # 차선 변경
                     return 2    
 
+
         # 1차선에 있을 경우, 속도 및 조향 설정
         if self.lane_state == 1:
             steer_angle = self.calculate_steering_angle(target_point = [self.lane_data.lane1_x, self.lane_data.lane1_y],
@@ -463,8 +432,6 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
             self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
-
-
 
         # 2차선에 있을 경우, 속도 및 조향 설정
         elif self.lane_state == 2:
@@ -542,7 +509,7 @@ class motion_planner(Node):
             car1_index = self.car_location_data.index(1)
             car1_y = self.car_data.y[car1_index]
 
-            # y 좌표 히스토리 저장 (0.2초마다 y좌표를 추가)
+            # y 좌표 히스토리 저장
             self.y_record_cnt += 1
             self.car1_y_history.append(car1_y)
 
