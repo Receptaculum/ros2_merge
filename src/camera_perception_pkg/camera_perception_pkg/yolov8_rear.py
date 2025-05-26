@@ -28,7 +28,7 @@ NODE_NAME = "yolov8_rear"
 TOPIC_NAME = "segmented_data_rear"
 
 # 라벨 이름 (car, line)
-LABEL_NAME = ["car", "line"]
+LABEL_NAME = ["car", "line", "blank"]
 
 # 구독 토픽 이름
 SUB_TOPIC_NAME = "image_publisher_rear"
@@ -107,6 +107,7 @@ class yolov8(Node):
         # 라벨 이름 변수 선언
         self.label_0 = label_name[0]
         self.label_1 = label_name[1]
+        self.label_2 = label_name[2]
 
         # 디버그 변수 선언
         self.debug = debug
@@ -144,6 +145,7 @@ class yolov8(Node):
         # 카운트를 위한 변수 선언
         cnt_0 = 0
         cnt_1 = 0
+        cnt_2 = 0
 
         # 확률에 대한 내림차순 정렬 (이미 Ultralytics의 전처리 과정에 해당 작업이 포함되어 있기에 제외함, Deprecated)
         # predict_box = self.predicted[0].boxes[torch.argsort(self.predicted[0].boxes.conf, descending=True)]
@@ -157,7 +159,11 @@ class yolov8(Node):
 
         # Line 데이터 처리를 위한 레지스터 선언
         area = []
-        line_data = []
+        point_data = []
+
+        # Blank 데이터 처리를 위한 레지스터 선언
+        blank_area = []
+        blank_point_data = []
 
         # Box : 상자 / Keypoint : 관절 표현 / Mask : 영역 표시
         for n, predict_val in enumerate(predict_box):
@@ -169,8 +175,13 @@ class yolov8(Node):
             
             elif name == self.label_1.strip():
                 area.append(predict_box[n].xywh[0][2]*predict_box[n].xywh[0][3])
-                line_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
+                point_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
                 cnt_1 += 1         
+
+            elif name == self.label_2.strip():
+                blank_area.append(predict_box[n].xywh[0][2]*predict_box[n].xywh[0][3])
+                blank_point_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
+                cnt_2 += 1  
 
                 # Polygon 형식
                 # self.msg_2.data = self.predicted[0].masks[n].xy[0].flatten().tolist() 
@@ -180,10 +191,18 @@ class yolov8(Node):
 
         try:
             # 면적이 최대인 객체 추가
-            msg.line.extend(line_data[area.index(max(area))])
+            msg.line.extend(point_data[area.index(max(area))])
         except:
             # 선이 감지되지 않은 경우
             pass
+
+        try:
+            # 면적이 최대인 객체 추가
+            msg.blank.extend(blank_point_data[blank_area.index(max(blank_area))])
+        except:
+            # 공백이 감지되지 않은 경우
+            pass
+      
 
         self.publisher.publish(msg)      
 
