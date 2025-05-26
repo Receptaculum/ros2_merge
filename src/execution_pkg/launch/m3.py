@@ -19,11 +19,11 @@ def generate_launch_description():
         #    output='screen'
         #),       
 
-        Node(
-            package='camera_perception_pkg', 
-            executable='image_publisher_rear',
-            output='screen'
-        ),       
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='image_publisher_rear',
+        #    output='screen'
+        #),       
 
         #Node(
         #    package='camera_perception_pkg', 

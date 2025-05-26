@@ -24,18 +24,21 @@ source ./install/setup.bash
 ```bash
 ./to_m1.sh  
 ros2 launch execution_pkg m1.py
+ros2 run camera_perception_pkg image_publisher
 ```
 
 ### Mission 2
 ```bash
 ./to_m2.sh  
 ros2 launch execution_pkg m2.py
+ros2 run camera_perception_pkg image_publisher
 ```
 
 ### Mission 3 
 ```bash
 ./to_m3.sh  
 ros2 launch execution_pkg m3.py
+ros2 run camera_perception_pkg image_publisher_rear
 ```
 
 
@@ -146,3 +149,5 @@ ros2 launch execution_pkg m3.py
 
 ### ver. 1.0503.1
 - 모터 구동 Arduino 파일 추가
+
+(기록 중단)

@@ -13,11 +13,11 @@ def generate_launch_description():
         ###################################################
         
         # camera_perception_pkg <Start>                 
-        Node(
-            package='camera_perception_pkg', 
-            executable='image_publisher',
-            output='screen'
-        ),    
+        #Node(
+        #    package='camera_perception_pkg', 
+        #    executable='image_publisher',
+        #    output='screen'
+        #),    
 
         Node(
             package='camera_perception_pkg', 
