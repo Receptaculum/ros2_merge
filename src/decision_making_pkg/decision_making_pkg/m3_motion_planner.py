@@ -246,6 +246,10 @@ class motion_planner(Node):
     def back_up_mode(self) -> int:
         self.get_logger().info(f"back_up_mode")
 
+        # LIDAR 양쪽에 장애물 감지시 정지
+        if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
+            return 5
+
         # 좌우 차선이 감지된 경우
         if len(self.line_data.left) !=0 and len(self.line_data.right) !=0:
             self.get_logger().info(f"debug:line_center")
@@ -269,7 +273,7 @@ class motion_planner(Node):
             x_spline = splev(y_spline, spline_params)  
 
             y_target = 460
-            x_target = np.nan_to_num(x_spline[y_target])
+            x_target = np.nan_to_num(x_spline[y_target], nan=int(BUMPER_POSITION[0]/2))
 
             target_point = [x_target, y_target]
 
@@ -303,25 +307,50 @@ class motion_planner(Node):
 
             # / 편향 
             if x_line < x_car:
-                self.get_logger().info(f"debug:correction-//")
+                self.get_logger().info(f"debug:correction-/ (1)")
                 self.send_command(steer_angle = 30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                time.sleep(3)
+                # time.sleep(3)
 
                 # 현 상태 유지
                 return 4
 
             # \ 편향
             else:
-                self.get_logger().info(f"debug:correction-\\")
+                self.get_logger().info(f"debug:correction-\\ (1)")
                 self.send_command(steer_angle = -30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                time.sleep(3)
+                # time.sleep(3)
 
                 # 현 상태 유지
                 return 4
+            
+        # 가운데 선이 검출된 경우
+        elif len(self.line_data.center) != 0:
+            x1_c, y1_c, x2_c, y2_c = self.line_data.center
+            theta = np.arctan((y1_c - y2_c)/(x1_c - x2_c + 1e-6))*(180/np.pi)
+
+            # / 편향 
+            if theta < -3:
+                self.get_logger().info(f"debug:correction-/ (2)")
+                self.send_command(steer_angle = 15, left_speed = -20, right_speed = -20)
+
+                # 현 상태 유지
+                return 4
+
+            # \ 편향                
+            elif theta > 3:
+                self.get_logger().info(f"debug:correction-\\ (2)")
+                self.send_command(steer_angle = -15, left_speed = -20, right_speed = -20)
+
+                # 현 상태 유지
+                return 4
+            
+            else:
+                self.get_logger().info(f"debug:none")
+                angle = 0
 
         # 그 외의 경우
         else:
@@ -333,10 +362,6 @@ class motion_planner(Node):
 
         # 후진 진행
         self.send_command(steer_angle = angle, left_speed = -30, right_speed = -30)
-
-        # LIDAR 양쪽에 장애물 감지시 정지
-        if self.lidar_data.data[0] == True and self.lidar_data.data[1] == True:
-            return 5
 
         # 현 상태 유지
         return 4
