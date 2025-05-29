@@ -81,11 +81,11 @@ def generate_launch_description():
         ###################################################
         
         # debug_pkg <Start>
-        Node(
-            package='debug_pkg', 
-            executable='data_debugger',
-            output='screen'
-        ),
+        #Node(
+        #    package='debug_pkg', 
+        #    executable='data_debugger',
+        #    output='screen'
+        #),
                 
         Node(
             package='debug_pkg', 
