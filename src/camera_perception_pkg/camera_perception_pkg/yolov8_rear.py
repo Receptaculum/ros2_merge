@@ -180,7 +180,7 @@ class yolov8(Node):
 
             elif name == self.label_2.strip():
                 blank_area.append(predict_box[n].xywh[0][2]*predict_box[n].xywh[0][3])
-                blank_point_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
+                blank_point_data.append(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
                 cnt_2 += 1  
 
                 # Polygon 형식
