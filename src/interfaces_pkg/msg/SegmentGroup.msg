@@ -4,4 +4,5 @@ int16[] traffic_light
 int16[] car
 int16[] crosswalk
 int16[] line
-int16[] blank
+int16[] blank_mask
+int16[] blank_box

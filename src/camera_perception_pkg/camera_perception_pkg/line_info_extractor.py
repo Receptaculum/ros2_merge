@@ -70,16 +70,24 @@ class LineDetector(Node):
         img_hough_post = np.zeros([FRAME_SIZE[1], FRAME_SIZE[0]]).astype(np.uint8)
 
         # 점 데이터
-        point = np.array(msg.line).reshape(-1, 2).astype(np.int32)
+        if len(msg.line) != 0:
+            point = np.array(msg.line).reshape(-1, 2).astype(np.int32)
+        elif len(msg.blank_mask) != 0:
+            point = np.array(msg.blank_mask).reshape(-1, 2).astype(np.int32)
+        else:
+            point = []           
 
         # 점 데이터 연결 및 이미지에 투사
-        cv2.polylines(img_base, [point], isClosed=False, color=255, thickness=2)
+        if len(point) != 0:
+            cv2.polylines(img_base, [point], isClosed=False, color=255, thickness=2)
 
-        # Hough 변환
-        lines = cv2.HoughLinesP(
-            img_base, rho=1, theta=np.pi/180, threshold=50, 
-            minLineLength=50, maxLineGap=100
-        )
+            # Hough 변환
+            lines = cv2.HoughLinesP(
+                img_base, rho=0.5, theta=np.pi/180, threshold=50, 
+                minLineLength=50, maxLineGap=100
+            )
+        else:
+            lines = None
 
         # 분류 결과 저장 레지스터
         line_l = []

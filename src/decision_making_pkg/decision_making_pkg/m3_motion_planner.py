@@ -262,10 +262,26 @@ class motion_planner(Node):
             x_min = (x2_l + x2_r)/2
             y_min = (y2_l + y2_r)/2
 
-            y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])
+            # Blank가 감지된 경우
+            if len(self.yolo_rear_data.blank_box) > 0:
+                self.get_logger().info(f"blank:True")
+                x_u, y_u, x_l, y_l = self.yolo_rear_data.blank_box
 
-            x_spline = np.array([x_max, x_min, BUMPER_POSITION[0]])[np.argsort(y_spline)]
-            y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])[np.argsort(y_spline)]
+                x_blank = (x_u + x_l)/2
+                y_blank = (y_u + y_l)/2
+
+                y_spline = np.array([y_max, y_blank, y_min, BUMPER_POSITION[1]])
+
+                x_spline = np.array([x_max, x_blank, x_min, BUMPER_POSITION[0]])[np.argsort(y_spline)]
+                y_spline = np.array([y_max, y_blank, y_min, BUMPER_POSITION[1]])[np.argsort(y_spline)]               
+
+            # Blank가 감지되지 않은 경우
+            else:
+                self.get_logger().info(f"blank:False")
+                y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])
+
+                x_spline = np.array([x_max, x_min, BUMPER_POSITION[0]])[np.argsort(y_spline)]
+                y_spline = np.array([y_max, y_min, BUMPER_POSITION[1]])[np.argsort(y_spline)]
 
             spline_params = splrep(y_spline, x_spline, k=2)
 
@@ -333,7 +349,7 @@ class motion_planner(Node):
             theta = np.arctan((y1_c - y2_c)/(x1_c - x2_c + 1e-6))*(180/np.pi)
 
             # / 편향 
-            if theta < -3:
+            if theta < -1:
                 self.get_logger().info(f"debug:correction-/ (2)")
                 self.send_command(steer_angle = 15, left_speed = -20, right_speed = -20)
 
@@ -341,7 +357,7 @@ class motion_planner(Node):
                 return 4
 
             # \ 편향                
-            elif theta > 3:
+            elif theta > 1:
                 self.get_logger().info(f"debug:correction-\\ (2)")
                 self.send_command(steer_angle = -15, left_speed = -20, right_speed = -20)
 

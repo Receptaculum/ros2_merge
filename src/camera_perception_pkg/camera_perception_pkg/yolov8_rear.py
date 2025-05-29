@@ -164,6 +164,7 @@ class yolov8(Node):
         # Blank 데이터 처리를 위한 레지스터 선언
         blank_area = []
         blank_point_data = []
+        blank_box_data = []
 
         # Box : 상자 / Keypoint : 관절 표현 / Mask : 영역 표시
         for n, predict_val in enumerate(predict_box):
@@ -180,7 +181,8 @@ class yolov8(Node):
 
             elif name == self.label_2.strip():
                 blank_area.append(predict_box[n].xywh[0][2]*predict_box[n].xywh[0][3])
-                blank_point_data.append(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
+                blank_point_data.append(predict_mask[n].xy[0].astype(np.int16).flatten().tolist())
+                blank_box_data.append(predict_box[n].xyxy[0].to(torch.int16).flatten().tolist())
                 cnt_2 += 1  
 
                 # Polygon 형식
@@ -198,12 +200,12 @@ class yolov8(Node):
 
         try:
             # 면적이 최대인 객체 추가
-            msg.blank.extend(blank_point_data[blank_area.index(max(blank_area))])
+            msg.blank_mask.extend(blank_point_data[blank_area.index(max(blank_area))])
+            msg.blank_box.extend(blank_box_data[blank_area.index(max(blank_area))])
         except:
             # 공백이 감지되지 않은 경우
             pass
       
-
         self.publisher.publish(msg)      
 
     def shutdown(self):
