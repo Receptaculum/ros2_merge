@@ -20,7 +20,7 @@ SUB_TOPIC_YOLO = "segmented_data"
 SUB_TOPIC_YOLO_FOR_CROSSWALK = "crosswalk_data"
 
 # 발행 토픽 이름
-PUB_TOPIC_NAME = "command_data"
+PUB_TOPIC_NAME = "command_pre_data"
 
 # 연산 주기 설정
 PERIOD = 0.1

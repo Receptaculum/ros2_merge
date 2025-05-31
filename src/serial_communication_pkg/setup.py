@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'serial_communicator = serial_communication_pkg.serial_communicator:main',
             'serial_communicator_legacy = serial_communication_pkg.serial_communicator_legacy:main',
+            'bridge = serial_communication_pkg.bridge:main',
         ],
     },
 )
