@@ -24,7 +24,7 @@ source ./install/setup.bash
 ```bash
 ./to_m1.sh  
 ros2 launch execution_pkg m1.py
-ros2 run camera_perception_pkg image_publisher
+ros2 run serial_communication_pkg bridge
 ```
 
 ### Mission 2
