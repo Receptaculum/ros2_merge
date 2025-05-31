@@ -14,8 +14,8 @@ const int POT = A7;
 const int STEERING_SPEED = 128;
 
 // 가변저항 값 범위
-const int resistance_most_left = 587;
-const int resistance_most_right = 470;
+const int resistance_most_left = 585;
+const int resistance_most_right = 472;
 
 // 조향 최대 단계 수 (한 쪽 기준)
 // 값: 7 --> 20 -> 15 -> 10
