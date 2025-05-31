@@ -13,11 +13,11 @@ def generate_launch_description():
         ###################################################
         
         # camera_perception_pkg <Start>
-        #Node(
-        #    package='camera_perception_pkg', 
-        #    executable='image_publisher',
-        #    output='screen'
-        #),       
+        Node(
+            package='camera_perception_pkg', 
+            executable='image_publisher',
+            output='screen'
+        ),       
 
         Node(
             package='camera_perception_pkg', 
@@ -75,7 +75,7 @@ def generate_launch_description():
         # serial_communication_pkg <Start>
         Node(
             package='serial_communication_pkg', 
-            executable='serial_communicator_legacy',
+            executable='serial_communicator',
             output='screen'
         ),
          # serial_communication_pkg <End>

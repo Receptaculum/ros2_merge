@@ -532,7 +532,26 @@ class motion_planner(Node):
 
                     # drive_mode 진입
                     return 1  
-        
+
+        # 차량 위치 결정
+        d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
+        d_2 = abs(self.lane_data.lane2_x - BUMPER_POSITION[0])
+
+        # 2차선 위치 조건 (재위치)
+        if (d_1 > d_2) and self.car_1 == False:
+            
+            # 차선 변경
+            self.lane_state = 2
+
+            # 메모리 초기화
+            self.car1_y_history = []
+
+            # 5초 지연
+            time.sleep(5)
+
+            # 주행 모드
+            return 1
+
         # 현 상태 유지
         return 3
 

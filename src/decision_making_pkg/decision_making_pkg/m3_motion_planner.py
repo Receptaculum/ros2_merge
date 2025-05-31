@@ -204,7 +204,7 @@ class motion_planner(Node):
         # 우측 LIDAR에 사물이 감지된 경우
         if self.lidar_data.data[1] == True:
             # 지연
-            time.sleep(2)
+            time.sleep(1.8)
             return 2
 
         # 현 상태 유지
@@ -217,10 +217,10 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 100)
+        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 130)
 
         # 지연
-        time.sleep(8)
+        time.sleep(6.5)
 
         # 다음 단계로 이동
         return 3
@@ -294,7 +294,7 @@ class motion_planner(Node):
             target_point = [x_target, y_target]
 
             # 조향각 계산
-            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 10)
+            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 7)
 
         # 2개의 차량이 감지된 경우
         elif len(self.car_rear_data.x) == 2:
@@ -302,7 +302,7 @@ class motion_planner(Node):
 
             # 조향각 계산
             target_point = [sum(self.car_rear_data.x)/2, sum(self.car_rear_data.y)/2]
-            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 10)
+            angle = self.calculate_steering_angle(target_point, BUMPER_POSITION, 7)
 
         # 1개의 차량이 감지된 경우 + 차선이 1개 감지된 경우(L, R)
         elif len(self.car_rear_data.x) == 1 and ((len(self.line_data.left) == 0 and len(self.line_data.right) != 0) or (len(self.line_data.left) != 0 and len(self.line_data.right) == 0)):
@@ -327,7 +327,7 @@ class motion_planner(Node):
                 self.send_command(steer_angle = 30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                # time.sleep(3)
+                time.sleep(2)
 
                 # 현 상태 유지
                 return 4
@@ -338,7 +338,7 @@ class motion_planner(Node):
                 self.send_command(steer_angle = -30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                # time.sleep(3)
+                time.sleep(2)
 
                 # 현 상태 유지
                 return 4
@@ -391,8 +391,8 @@ class motion_planner(Node):
         # 정지
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
 
-        # 2초 지연
-        time.sleep(2)
+        # 4초 지연
+        time.sleep(4)
 
         # 마무리 단계로 이동
         return 6
@@ -404,19 +404,37 @@ class motion_planner(Node):
         self.get_logger().info(f"forward_mode")   
 
         # 직진
-        self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
+        self.send_command(steer_angle = 0, left_speed = 150, right_speed = 150)
 
-        # 2초 지연
-        time.sleep(2)
+        # 1.1초 지연
+        time.sleep(1.1)
 
         # 우회전
-        self.send_command(steer_angle = 30, left_speed = 200, right_speed = 200)
+        self.send_command(steer_angle = 30, left_speed = 150, right_speed = 150)
 
         # 5초 지연
         time.sleep(5)
 
+        # 정지
+        self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
+
+        # 0.5초 지연
+        time.sleep(0.5)
+
+        # 후진
+        self.send_command(steer_angle = -30, left_speed = -150, right_speed = -150)
+
+        # 3초 지연
+        time.sleep(2.7)
+
+        # 정지
+        self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
+
+        # 0.5초 지연
+        time.sleep(0.5)
+
         # 직진
-        self.send_command(steer_angle = 0, left_speed = 200, right_speed = 200)
+        self.send_command(steer_angle = 0, left_speed = 150, right_speed = 150)
 
         # Trapping
         while True:
