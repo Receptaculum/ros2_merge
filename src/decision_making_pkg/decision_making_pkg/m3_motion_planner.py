@@ -199,12 +199,12 @@ class motion_planner(Node):
         self.get_logger().info(f"search_mode")   
 
         # 정속 주행
-        self.send_command(steer_angle = 0, left_speed = 100, right_speed = 100)
+        self.send_command(steer_angle = 7, left_speed = 100, right_speed = 100)
         
         # 우측 LIDAR에 사물이 감지된 경우
         if self.lidar_data.data[1] == True:
             # 지연
-            time.sleep(1.8)
+            time.sleep(1.7)
             return 2
 
         # 현 상태 유지
@@ -217,10 +217,10 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 130)
+        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 150)
 
         # 지연
-        time.sleep(6.5)
+        time.sleep(4.5)
 
         # 다음 단계로 이동
         return 3
@@ -373,11 +373,12 @@ class motion_planner(Node):
             self.get_logger().info(f"debug:none")
             angle = 0
 
-        # 각도 제한
+        # 각도 편향 및 제한
+        angle = angle + 7
         angle = int(np.clip(angle, -30, 30))
 
         # 후진 진행
-        self.send_command(steer_angle = angle, left_speed = -30, right_speed = -30)
+        self.send_command(steer_angle = angle, left_speed = -50, right_speed = -50)
 
         # 현 상태 유지
         return 4
@@ -424,8 +425,8 @@ class motion_planner(Node):
         # 후진
         self.send_command(steer_angle = -30, left_speed = -150, right_speed = -150)
 
-        # 3초 지연
-        time.sleep(2.7)
+        # 1.7초 지연
+        time.sleep(1.7)
 
         # 정지
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
@@ -434,7 +435,7 @@ class motion_planner(Node):
         time.sleep(0.5)
 
         # 직진
-        self.send_command(steer_angle = 0, left_speed = 150, right_speed = 150)
+        self.send_command(steer_angle = 7, left_speed = 150, right_speed = 150)
 
         # Trapping
         while True:
