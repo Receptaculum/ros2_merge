@@ -35,7 +35,7 @@ LABEL_NAME = ["crosswalk"]
 SUB_TOPIC_NAME = "image_publisher"
 
 # PT 파일 이름 지정 (확장자 포함, 해당 실행 파일의 디렉터리는 이미 앞에 포함되어 있다는 점에 유념)
-PT_NAME = "lib/pt/best.cross.0511.0017.pt"
+PT_NAME = "lib/pt/best.cross.0604.1325.pt"
 
 # CV 처리 영상 출력 여부
 DEBUG = True
