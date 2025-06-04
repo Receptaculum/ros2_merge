@@ -136,7 +136,7 @@ class yolov8(Node):
         if INV_COLOR == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        predicted = self.model.predict(frame, verbose=False) # Frame Segmentation 처리
+        predicted = self.model.predict(frame, verbose=False, conf=0.5) # Frame Segmentation 처리
 
         if self.debug == True: # 디버깅(화면 출력) 여부 결정
             cv2.imshow("YOLO-REAR", predicted[0].plot())
