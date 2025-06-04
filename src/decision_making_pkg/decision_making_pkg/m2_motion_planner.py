@@ -308,14 +308,14 @@ class motion_planner(Node):
                     
                     # 차량이 인식된 차선 면적보다 아래에 있는 경우  + 차선이 인식되지 않은 경우
                     else:
-                        # 차량이 1차선으로 판명되는 경우
-                        if x < 320/2:
-                            car_1 = True
-                            car_location_data.append(1)
                         # 차량이 2차선으로 판명되는 경우
-                        else:
+                        if x > 640 - 320/2:
                             car_2 = True
-                            car_location_data.append(2)   
+                            car_location_data.append(2)
+                        # 차량이 1차선으로 판명되는 경우
+                        else:
+                            car_1 = True
+                            car_location_data.append(1)   
 
             self.get_logger().info(f"detect: {car_1} {car_2}")
 
