@@ -57,10 +57,11 @@ SPEED_LANE2_CHANGE = 180
 BACK_UP_DISTANCE = 0.3
 
 # Lane Change Mode 유지 사이클
-MAINTAIN_LANE_CHANGE = 70
+MAINTAIN_LANE_CHANGE_1_to_2 = 85
+MAINTAIN_LANE_CHANGE_2_to_1 = 65
 
-Y_DISTANCE_THRESHOLD_MIN = 250 # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
-Y_DISTANCE_THRESHOLD_MAX = 260
+Y_DISTANCE_THRESHOLD_MIN = 250 - 15 # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
+Y_DISTANCE_THRESHOLD_MAX = 260 - 15
 Y_DECREASE_COUNT = 20          # y 좌표가 지속적으로 감소한 횟수
 
 ######################################################################################################
@@ -397,8 +398,8 @@ class motion_planner(Node):
                     # 정지
                     return 4
     
-                # 2차선에서 횡단보도의 위치가 430 이상 및 빨간색이 3번 연속 검출된 경우
-                elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 430 and self.traffic_reg.count("R") >= 3:
+                # 2차선에서 횡단보도의 위치가 428 이상 및 빨간색이 3번 연속 검출된 경우
+                elif self.lane_state == 2 and np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() > 428 and self.traffic_reg.count("R") >= 3:
                     # 정지
                     return 4
                 
@@ -464,7 +465,7 @@ class motion_planner(Node):
             self.send_command(steer_angle = int(np.clip(steer_angle*3, -30, 30)), left_speed = SPEED_LANE1_CHANGE, right_speed = SPEED_LANE1_CHANGE) 
             
             # Search Mode로의 변동 조건
-            if self.cnt > MAINTAIN_LANE_CHANGE:
+            if self.cnt > MAINTAIN_LANE_CHANGE_2_to_1:
                 self.lane_state = 1
                 self.cnt = 0
                 return 3
@@ -484,7 +485,7 @@ class motion_planner(Node):
             self.send_command(steer_angle = int(np.clip(steer_angle*3, -30, 30)), left_speed = SPEED_LANE2_CHANGE, right_speed = SPEED_LANE2_CHANGE) 
             
             # Driving Mode로의 변동 조건
-            if self.cnt > MAINTAIN_LANE_CHANGE:
+            if self.cnt > MAINTAIN_LANE_CHANGE_1_to_2:
                 self.lane_state = 2
                 self.cnt = 0
                 return 1

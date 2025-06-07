@@ -223,13 +223,13 @@ class motion_planner(Node):
         self.get_logger().info(f"drive_mode : {self.lane_state}")
         
         # 1차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
-        if self.lane_state == 1 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
-            # 횡단보도의 위치가 365 이상인 경우 + 카운트가 일정 수준 이상인 경우
-            if 365 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() and self.cnt > 50:
+        if self.lane_state == 1 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 5:
+            # 횡단보도의 위치가 345 이상인 경우 + 카운트가 일정 수준 이상인 경우
+            if 345 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() and self.cnt > 50:
                 return 2
 
         # 2차선에서 횡단보도가 연속 10번 감지되었을 경우 + 신호등이 감지된 경우
-        elif self.lane_state == 2 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 10:
+        elif self.lane_state == 2 and len(self.yolo_data_cross.crosswalk) > 0 and len(self.yolo_data.traffic_light) > 0 and self.crosswalk_reg.count(True) >= 5:
             # 횡단보도의 위치가 345 이상인 경우 + 카운트가 일정 수준 이상인 경우
             if 345 < np.array(self.yolo_data_cross.crosswalk).reshape(-1, 2)[:, 1].max() and self.cnt > 50:
                 return 2
@@ -244,11 +244,14 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
-            if steer_angle < -28:
-                self.send_command(steer_angle=steer_angle, left_speed = SPEED-45, right_speed = SPEED)
+            if steer_angle < -27:
+                self.send_command(steer_angle=steer_angle, left_speed = SPEED-145, right_speed = SPEED-10)
 
-            elif steer_angle < -26:
-                self.send_command(steer_angle=steer_angle, left_speed = SPEED-30, right_speed = SPEED)
+            elif steer_angle < -25:
+                self.send_command(steer_angle=steer_angle, left_speed = SPEED-70, right_speed = SPEED)
+
+            elif steer_angle < -23:
+                self.send_command(steer_angle=steer_angle, left_speed = SPEED-35, right_speed = SPEED)
 
             else:
                 self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
@@ -264,10 +267,10 @@ class motion_planner(Node):
                                                         k_stanley=K_Stanley_2)
             # Differential 구현
             if steer_angle > 25:
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED)
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED-25)
 
             elif steer_angle <-25:  
-                self.send_command(steer_angle = steer_angle, left_speed = SPEED-20, right_speed = SPEED) 
+                self.send_command(steer_angle = steer_angle, left_speed = SPEED-25, right_speed = SPEED) 
 
             else:
                 self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 

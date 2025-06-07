@@ -217,7 +217,7 @@ class motion_planner(Node):
         self.get_logger().info(f"turn_mode")   
 
         # 좌측 조향 운전
-        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 150)
+        self.send_command(steer_angle = -30, left_speed = 40, right_speed = 160)
 
         # 지연
         time.sleep(4.5)
@@ -327,7 +327,7 @@ class motion_planner(Node):
                 self.send_command(steer_angle = 30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                time.sleep(2)
+                time.sleep(1)
 
                 # 현 상태 유지
                 return 4
@@ -338,7 +338,7 @@ class motion_planner(Node):
                 self.send_command(steer_angle = -30, left_speed = -20, right_speed = -20)
 
                 # 지연
-                time.sleep(2)
+                time.sleep(1)
 
                 # 현 상태 유지
                 return 4
@@ -425,8 +425,8 @@ class motion_planner(Node):
         # 후진
         self.send_command(steer_angle = -30, left_speed = -150, right_speed = -150)
 
-        # 1.7초 지연
-        time.sleep(1.7)
+        # 1.9초 지연
+        time.sleep(1.9)
 
         # 정지
         self.send_command(steer_angle = 0, left_speed = 0, right_speed = 0)
