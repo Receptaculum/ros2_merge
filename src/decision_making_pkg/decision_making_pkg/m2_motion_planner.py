@@ -60,8 +60,8 @@ BACK_UP_DISTANCE = 0.3
 MAINTAIN_LANE_CHANGE_1_to_2 = 85
 MAINTAIN_LANE_CHANGE_2_to_1 = 65
 
-Y_DISTANCE_THRESHOLD_MIN = 250 - 15 # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
-Y_DISTANCE_THRESHOLD_MAX = 260 - 15
+Y_DISTANCE_THRESHOLD_MIN = 250 - 5 # 충분히 멀어졌다고 간주할 y 값 (측정 후 조정정)
+Y_DISTANCE_THRESHOLD_MAX = 260 - 5
 Y_DECREASE_COUNT = 20          # y 좌표가 지속적으로 감소한 횟수
 
 ######################################################################################################
@@ -432,7 +432,7 @@ class motion_planner(Node):
                                                         k_angle=K_Angle_1,
                                                         k_stanley=K_Stanley_1)
             # Differential 구현
-            self.send_command(steer_angle = steer_angle, left_speed = SPEED, right_speed = SPEED) 
+            self.send_command(steer_angle = steer_angle, left_speed = SPEED+80, right_speed = SPEED+80) 
 
         # 2차선에 있을 경우, 속도 및 조향 설정
         elif self.lane_state == 2:
@@ -534,6 +534,7 @@ class motion_planner(Node):
                     # drive_mode 진입
                     return 1  
 
+        '''
         # 차량 위치 결정
         d_1 = abs(self.lane_data.lane1_x - BUMPER_POSITION[0])
         d_2 = abs(self.lane_data.lane2_x - BUMPER_POSITION[0])
@@ -552,7 +553,8 @@ class motion_planner(Node):
 
             # 주행 모드
             return 1
-
+        '''
+            
         # 현 상태 유지
         return 3
 
